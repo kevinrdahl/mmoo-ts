@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>MMO Online TS</title>
+    <meta charset="UTF-8">
+    <meta name="description" content="Rebuilding again? Say it ain't so!">
+
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            height:100%;
+            width:100%;
+            overflow:hidden;
+        }
+
+        #viewDiv {
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
+    </style>
+
+    <script src="js/lib/pixi.js"></script>
+    <script src="https://code.createjs.com/soundjs-0.6.2.min.js"></script>
+    <script src="js/mmoo-client.js" defer></script>
+    <!--END SCRIPTS-->
+</head>
+
+<body>
+    <div id="viewDiv"></div>
+
+    <script>
+        document.getElementById("viewDiv").focus();
+
+        window.urlArgs = function () {
+            var query_string = {};
+            var query = window.location.search.substring(1);
+            var vars = query.split("&");
+            for (var i=0;i<vars.length;i++) {
+                var pair = vars[i].split("=");
+                // If first entry with this name
+                if (typeof query_string[pair[0]] === "undefined") {
+                    query_string[pair[0]] = pair[1];
+                    // If second entry with this name
+                } else if (typeof query_string[pair[0]] === "string") {
+                    var arr = [ query_string[pair[0]], pair[1] ];
+                    query_string[pair[0]] = arr;
+                    // If third or later entry with this name
+                } else {
+                    query_string[pair[0]].push(pair[1]);
+                }
+            }
+            return query_string;
+        } ();
+    </script>
+</body>
+
+</html>
