@@ -1,7 +1,65 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
-var Log = require('./util/log');
-var connection_1 = require('./connection');
+var Log = require('./util/Log');
+var Connection = (function () {
+    function Connection(hostName, port) {
+        var _this = this;
+        this.hostName = hostName;
+        this.port = port;
+        this.connString = "";
+        this.socket = null;
+        this.onSocketConnect = function (e) {
+            Log.log("conn", "Connected to " + _this.connString);
+            _this.onConnect();
+        };
+        this.onSocketDisconnect = function (e) {
+            Log.log("conn", "Disconnected from " + _this.connString);
+        };
+        this.onSocketError = function (e) {
+            Log.log("error", "CONNECTION " + e.toString());
+            _this.onError(e);
+        };
+        this.onSocketMessage = function (message) {
+            Log.log("connRecv", message.data);
+            _this.onMessage(message.data);
+        };
+        Log.setLogType("conn", new Log.LogType("", "#fff", "#06c"));
+        Log.setLogType("connSend", new Log.LogType("SEND: ", "#93f"));
+        Log.setLogType("connRecv", new Log.LogType("RECV: ", "#06c"));
+        this.connString = 'ws://' + hostName + ':' + port;
+    }
+    Connection.prototype.connect = function () {
+        if (this.socket != null) {
+            this.disconnect("reconnecting");
+        }
+        this.socket = new WebSocket(this.connString);
+        this.socket.addEventListener("open", this.onSocketConnect);
+        this.socket.addEventListener("close", this.onSocketDisconnect);
+        this.socket.addEventListener("message", this.onSocketMessage);
+        this.socket.addEventListener("error", this.onSocketError);
+    };
+    Connection.prototype.disconnect = function (reason) {
+        if (reason === void 0) { reason = "???"; }
+        this.socket.close(1000, reason);
+        this.socket = null;
+    };
+    Connection.prototype.send = function (msg) {
+        try {
+            this.socket.send(msg);
+        }
+        catch (err) {
+            Log.log("error", err.toString());
+        }
+    };
+    return Connection;
+}());
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Connection;
+
+},{"./util/Log":12}],2:[function(require,module,exports){
+"use strict";
+var Log = require('./util/Log');
+var Connection_1 = require('./Connection');
 var TextureLoader_1 = require('./textures/TextureLoader');
 var TextureWorker_1 = require('./textures/TextureWorker');
 var SoundManager_1 = require('./sound/SoundManager');
@@ -85,7 +143,7 @@ var Game = (function () {
         loadingText.id = "loadingText";
         this.interfaceRoot.addChild(loadingText);
         loadingText.attachToParent(AttachInfo_1.default.Center);
-        this.connection = new connection_1.default("localhost", 9002);
+        this.connection = new Connection_1.default("localhost", 9002);
         this.connection.onConnect = function () { return _this.onConnect(); };
         this.connection.onMessage = function (msg) { return _this.onConnectionMessage(msg); };
         this.connection.onError = function (e) { return _this.onConnectionError(e); };
@@ -148,65 +206,7 @@ var Game = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
 
-},{"./connection":2,"./interface/AttachInfo":3,"./interface/InterfaceElement":4,"./interface/TextElement":5,"./sound/SoundAssets":7,"./sound/SoundManager":8,"./textures/TextureLoader":9,"./textures/TextureWorker":10,"./util/log":12}],2:[function(require,module,exports){
-"use strict";
-var Log = require('./util/log');
-var Connection = (function () {
-    function Connection(hostName, port) {
-        var _this = this;
-        this.hostName = hostName;
-        this.port = port;
-        this.connString = "";
-        this.socket = null;
-        this.onSocketConnect = function (e) {
-            Log.log("conn", "Connected to " + _this.connString);
-            _this.onConnect();
-        };
-        this.onSocketDisconnect = function (e) {
-            Log.log("conn", "Disconnected from " + _this.connString);
-        };
-        this.onSocketError = function (e) {
-            Log.log("error", "CONNECTION " + e.toString());
-            _this.onError(e);
-        };
-        this.onSocketMessage = function (message) {
-            Log.log("connRecv", message.data);
-            _this.onMessage(message.data);
-        };
-        Log.setLogType("conn", new Log.LogType("", "#fff", "#06c"));
-        Log.setLogType("connSend", new Log.LogType("SEND: ", "#93f"));
-        Log.setLogType("connRecv", new Log.LogType("RECV: ", "#06c"));
-        this.connString = 'ws://' + hostName + ':' + port;
-    }
-    Connection.prototype.connect = function () {
-        if (this.socket != null) {
-            this.disconnect("reconnecting");
-        }
-        this.socket = new WebSocket(this.connString);
-        this.socket.addEventListener("open", this.onSocketConnect);
-        this.socket.addEventListener("close", this.onSocketDisconnect);
-        this.socket.addEventListener("message", this.onSocketMessage);
-        this.socket.addEventListener("error", this.onSocketError);
-    };
-    Connection.prototype.disconnect = function (reason) {
-        if (reason === void 0) { reason = "???"; }
-        this.socket.close(1000, reason);
-        this.socket = null;
-    };
-    Connection.prototype.send = function (msg) {
-        try {
-            this.socket.send(msg);
-        }
-        catch (err) {
-            Log.log("error", err.toString());
-        }
-    };
-    return Connection;
-}());
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = Connection;
-
-},{"./util/log":12}],3:[function(require,module,exports){
+},{"./Connection":1,"./interface/AttachInfo":3,"./interface/InterfaceElement":4,"./interface/TextElement":5,"./sound/SoundAssets":7,"./sound/SoundManager":8,"./textures/TextureLoader":9,"./textures/TextureWorker":10,"./util/Log":12}],3:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
 var AttachInfo = (function () {
@@ -484,7 +484,7 @@ var InterfaceElement = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceElement;
 
-},{"../../common/Vector2D":13,"../Game":1}],5:[function(require,module,exports){
+},{"../../common/Vector2D":13,"../Game":2}],5:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -542,7 +542,7 @@ var viewDiv = document.getElementById("viewDiv");
 var game = new Game_1.default(viewDiv);
 game.init();
 
-},{"./Game":1}],7:[function(require,module,exports){
+},{"./Game":2}],7:[function(require,module,exports){
 "use strict";
 exports.mainMenuMusic = [
     ["music/fortress", "sound/music/fortress.ogg"]

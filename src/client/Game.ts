@@ -1,8 +1,8 @@
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 /// <reference path="../../declarations/createjs/soundjs.d.ts"/>
 
-import Log = require('./util/log');
-import Connection from './connection';
+import Log = require('./util/Log');
+import Connection from './Connection';
 import TextureLoader from './textures/TextureLoader';
 import TextureWorker from './textures/TextureWorker';
 import SoundManager from './sound/SoundManager';

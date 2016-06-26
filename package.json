@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/kevinrdahl/mmo-online-hd#readme",
   "dependencies": {
+    "grunt": "^1.0.1",
     "ws": "^1.1.0"
   },
   "devDependencies": {
