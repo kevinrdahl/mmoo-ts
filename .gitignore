@@ -40,7 +40,8 @@ jspm_packages
 .idea/
 
 #build folder
-build/
+build/*
+!build/client/worker.js
 
 # =========================
 # Operating System Files

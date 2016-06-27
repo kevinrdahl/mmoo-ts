@@ -1,5 +1,5 @@
 "use strict";
-var Log = require('./util/log');
+var Log = require('./util/Log');
 var Connection = (function () {
     function Connection(hostName, port) {
         var _this = this;
@@ -54,4 +54,4 @@ var Connection = (function () {
 }());
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Connection;
-//# sourceMappingURL=connection.js.map
+//# sourceMappingURL=Connection.js.map
