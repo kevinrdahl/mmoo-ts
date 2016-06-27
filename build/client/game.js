@@ -1,6 +1,6 @@
 "use strict";
-var Log = require('./util/log');
-var connection_1 = require('./connection');
+var Log = require('./util/Log');
+var Connection_1 = require('./Connection');
 var TextureLoader_1 = require('./textures/TextureLoader');
 var TextureWorker_1 = require('./textures/TextureWorker');
 var SoundManager_1 = require('./sound/SoundManager');
@@ -84,7 +84,7 @@ var Game = (function () {
         loadingText.id = "loadingText";
         this.interfaceRoot.addChild(loadingText);
         loadingText.attachToParent(AttachInfo_1.default.Center);
-        this.connection = new connection_1.default("localhost", 9002);
+        this.connection = new Connection_1.default("localhost", 9002);
         this.connection.onConnect = function () { return _this.onConnect(); };
         this.connection.onMessage = function (msg) { return _this.onConnectionMessage(msg); };
         this.connection.onError = function (e) { return _this.onConnectionError(e); };
@@ -146,4 +146,4 @@ var Game = (function () {
 }());
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
-//# sourceMappingURL=game.js.map
+//# sourceMappingURL=Game.js.map

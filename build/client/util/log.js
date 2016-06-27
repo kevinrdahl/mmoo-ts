@@ -28,4 +28,4 @@ function log(typeName, msg) {
         types[typeName].log(msg);
 }
 exports.log = log;
-//# sourceMappingURL=log.js.map
+//# sourceMappingURL=Log.js.map
