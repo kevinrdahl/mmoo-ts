@@ -1,0 +1,6 @@
+#Everything
+*
+
+#Except worker (and this)
+!.gitignore
+!worker.js

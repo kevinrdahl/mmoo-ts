@@ -34,14 +34,10 @@ jspm_packages
 .node_repl_history
 
 #grunt-ts cache
-.tscache/
+.tscache
 
 #WebStorm
-.idea/
-
-#build folder
-build/*
-!build/client/worker.js
+.idea
 
 # =========================
 # Operating System Files
