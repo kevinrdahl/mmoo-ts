@@ -1,36 +1,51 @@
 <!DOCTYPE html>
 <html>
-
   <head>
     <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="description" content="MMO Online : Freedom and fun: pick both.">
+    <meta name="viewport" content="width=640">
 
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+    <link rel="stylesheet" href="stylesheets/core.css" media="screen">
+    <link rel="stylesheet" href="stylesheets/mobile.css" media="handheld, only screen and (max-device-width:640px)">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
 
-    <title>MMO Online</title>
+    <script type="text/javascript" src="javascripts/modernizr.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="javascripts/headsmart.min.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function () {
+        $('#main_content').headsmart()
+      })
+    </script>
+    <title>MMO Online by kevinrdahl</title>
   </head>
 
   <body>
+    <a id="forkme_banner" href="https://github.com/kevinrdahl/mmoo-ts">View on GitHub</a>
+    <div class="shell">
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/kevinrdahl/mmoo-ts">View on GitHub</a>
+      <header>
+        <span class="ribbon-outer">
+          <span class="ribbon-inner">
+            <h1>MMO Online</h1>
+            <h2>Freedom and fun: pick both.</h2>
+          </span>
+          <span class="left-tail"></span>
+          <span class="right-tail"></span>
+        </span>
+      </header>
 
-          <h1 id="project_title">MMO Online</h1>
-          <h2 id="project_tagline">Freedom and fun: pick both.</h2>
+      <section id="downloads">
+        <span class="inner">
+          <a href="https://github.com/kevinrdahl/mmoo-ts/zipball/master" class="zip"><em>download</em> .ZIP</a><a href="https://github.com/kevinrdahl/mmoo-ts/tarball/master" class="tgz"><em>download</em> .TGZ</a>
+        </span>
+      </section>
 
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/kevinrdahl/mmoo-ts/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/kevinrdahl/mmoo-ts/tarball/master">Download this project as a tar.gz file</a>
-            </section>
-        </header>
-    </div>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
+      <span class="banner-fix"></span>
+
+
+      <section id="main_content">
         <h2>
 <a id="no-its-not-playable-yet" class="anchor" href="#no-its-not-playable-yet" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>No, it's not playable yet.</h2>
 
@@ -44,29 +59,36 @@
 <p>This is an attempt to create a game world that is not only worth playing in, but fun to play in. Games don't need to be obtuse to be deep, and they don't need to be dumbed down to be accessible. The game's design is informed by simple notions that people making MMOs seem to forget.</p>
 
 <h4>
-<a id="idea1" class="anchor" href="#idea1" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Players' actions should should affect the world around them in a way that makes sense and has meaning.</h4>
+<a id="actions-have-obvious-consequences" class="anchor" href="#actions-have-obvious-consequences" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Actions have obvious consequences.</h4>
 
-<p>If you put something somewhere, it should be there, and if you take something away, it should be gone. It's such an integral part of everyday life that designers always seem to neglect. Why bother doing something with no consequence?</p>
-
-<h4>
-<a id="idea2" class="anchor" href="#idea2" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Everything should come from somewhere.</h4>
-
-<p>In many games, players acquire items from systems which are outside of the game world. For instance, complete a dungeon and spin a wheel to receive an item. This takes you out of the world, by adding something with no logical reason to be there. Solution: don't do this! Find more interesting ways to give things to players.</p>
+<p>If your actions don't have any meaning, why do anything? If you put something somewhere, it should be there, and if you take something away, it should be gone. If you see a tree felled somewhere, it means someone cut it down. If you set fire to someone's house, that house will be gone. You monster.</p>
 
 <h4>
-<a id="characters-should-exist-in-one-world-and-one-world-only" class="anchor" href="#characters-should-exist-in-one-world-and-one-world-only" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Characters should exist in one world, and one world only.</h4>
+<a id="everything-comes-from-somewhere" class="anchor" href="#everything-comes-from-somewhere" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Everything comes from somewhere.</h4>
 
-<p>Do you think I care about the guy who just faded into existence with a star after his name? No, I don't. Because he's not a part of my world, and he'll be gone in a minute. He doesn't exist. Can there be multiple worlds? Sure, but they should each be their own, self-contained system.</p>
+<p>Most MMOs have systems which exist outside the game world and bring things into it. For instance, finish a dungeon and spin a wheel to get a random item; complete an achievement and get a silly hat; spend real money to get a cool sword. These systems give a cheap thrill to the player, but serve to devalue more organic means of acquiring things. What's more, they don't bring anything to the game that couldn't have been there anyway.</p>
 
 <h4>
-<a id="present-options-in-ways-people-will-understand" class="anchor" href="#present-options-in-ways-people-will-understand" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Present options in ways people will understand.</h4>
+<a id="characters-exist-in-only-one-world" class="anchor" href="#characters-exist-in-only-one-world" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Characters exist in only one world.</h4>
 
-<p>Everyone thinks they're so clever, reinventing the wheel for basic systems. Want to tackle a solved problem? <em>Use the solution</em>. No one ever opened their inventory hoping for a new, unique take on storing objects.</p>
+<p>This is twofold: you only see one world, and everything in your world is native to it. If two people go to the same place, they will see each other. If someone steals from you, you can hunt them down. Many MMOs let you play with people you will likely never meet again, often disabling many forms of interaction such as trade. This leads to interactions with little depth and no consequence.</p>
+
+<h4>
+<a id="dont-reinvent-the-wheel" class="anchor" href="#dont-reinvent-the-wheel" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Don't reinvent the wheel.</h4>
+
+<p>Want to tackle a solved problem? <em>Use the solution</em>. No one ever opened their inventory hoping for a new, unique take on item management. There is a place for reinvention, and basic functions aren't it.</p>
 
 <h4>
 <a id="any-type-of-character-should-be-possible" class="anchor" href="#any-type-of-character-should-be-possible" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Any type of character should be possible.</h4>
 
-<p>Players' ideal characters might not be obvious, or even sensible, but they should be allowed to make them anyway. If they want to gear up in chain mail pants, leather gloves, a horse-plumed helmet and a magic wand, they should be able to. It will suck, but they will have <em>chosen</em> to suck, and it will feel <em>great</em>. Some games let you combine two archetypes and say "wow, you can make <em>aaaaanything</em>!". Many things isn't anything. This is basic math.</p>
+<p>Players' ideal characters might not be obvious, or even sensible, but they should be allowed to make them anyway. If they want to gear up in chain mail pants, leather gloves, a horse-plumed helmet and a magic wand, they should be able to. It will suck, but they will have <em>chosen</em> to suck, and it will feel <em>great</em>. Some games let you combine two archetypes and say "wow, you can make <em>aaaaanything</em>!". Many things isn't anything. Don't lie to me.</p>
+
+<hr>
+
+<h2>
+<a id="gee-this-all-sounds-pretty-vague" class="anchor" href="#gee-this-all-sounds-pretty-vague" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Gee, this all sounds pretty vague.</h2>
+
+<p>It's meant to be. I don't want to type up loads of details that I won't get done for a long time. I'm not some kind of ideas guy.</p>
 
 <hr>
 
@@ -96,17 +118,21 @@
 
 <p>Probably not (yet). But thanks for asking, it means a lot.</p>
       </section>
-    </div>
 
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">MMO Online maintained by <a href="https://github.com/kevinrdahl">kevinrdahl</a></p>
-        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      <footer>
+        <span class="ribbon-outer">
+          <span class="ribbon-inner">
+            <p>this project by <a href="https://github.com/kevinrdahl">kevinrdahl</a> can be found on <a href="https://github.com/kevinrdahl/mmoo-ts">GitHub</a></p>
+          </span>
+          <span class="left-tail"></span>
+          <span class="right-tail"></span>
+        </span>
+        <p>Generated with <a href="https://pages.github.com">GitHub Pages</a> using Merlot</p>
+        <span class="octocat"></span>
       </footer>
+
     </div>
 
     
-
   </body>
 </html>
