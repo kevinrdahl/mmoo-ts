@@ -32,6 +32,7 @@ module.exports = function(grunt) {
     },
     ts: {
       default : {
+        target: ['es6'],
         src: ["src/**/*.ts"],
         outDir: "build"
       }

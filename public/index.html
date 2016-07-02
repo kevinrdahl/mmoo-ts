@@ -25,6 +25,13 @@
         }
     </style>
 
+    <!--
+        Shims to increase likelihood of ES6 support (the build target). Some of the TS defs require it.
+        The intended platforms remain up-to-date versions of Chrome, Firefox, and Edge.
+    -->
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/es5-shim/4.5.9/es5-shim.min.js"></script>
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.35.1/es6-shim.min.js"></script>
+
     <script src="js/lib/pixi.js"></script>
     <script src="https://code.createjs.com/soundjs-0.6.2.min.js"></script>
     <script src="js/mmoo-client.js" defer></script>

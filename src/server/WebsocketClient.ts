@@ -8,9 +8,9 @@
 
 import WebSocket = require('ws');
 
-export default class WebsocketClient {
-	public onMessage:(client:WebsocketClient, msg:string) => void;
-	public onDisconnect:(client:WebsocketClient) => void;
+export default class WebSocketClient {
+	public onMessage:(client:WebSocketClient, msg:string) => void;
+	public onDisconnect:(client:WebSocketClient) => void;
 	public messageQueue:Array<any> = [];
 
 	private static _idNum:number = 0;
@@ -20,8 +20,8 @@ export default class WebsocketClient {
 	get id():string { return this._id; }
 
 	constructor(socket:WebSocket) {
-		this._id = WebsocketClient._idNum.toString();
-		WebsocketClient._idNum++;
+		this._id = WebSocketClient._idNum.toString();
+		WebSocketClient._idNum++;
 
 		this._socket = socket;
 		socket.on("close", this._onDisconnect);

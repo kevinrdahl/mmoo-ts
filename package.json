@@ -2,23 +2,25 @@
   "name": "mmoo-ts",
   "version": "0.1.0",
   "description": "TypeScript reimplementation of MMOO",
-  "main": "app.js",
+  "main": "build/server/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kevinrdahl/mmo-online-hd.git"
+    "url": "git+https://github.com/kevinrdahl/mmoo-ts.git"
   },
   "author": "Kevin Dahl <kevin.of.dahl@gmail.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/kevinrdahl/mmo-online-hd/issues"
+    "url": "https://github.com/kevinrdahl/mmoo-ts/issues"
   },
-  "homepage": "https://github.com/kevinrdahl/mmo-online-hd#readme",
+  "homepage": "https://github.com/kevinrdahl/mmoo-ts#readme",
   "dependencies": {
     "grunt": "^1.0.1",
-    "ws": "^1.1.0"
+    "mongodb": "^2.1.18",
+    "ws": "^1.1.0",
+    "yamljs": "^0.2.8"
   },
   "devDependencies": {
     "express": "^4.13.4",
