@@ -1,6 +1,7 @@
 /// <reference path='../../declarations/node.d.ts' />
 /// <reference path='../../declarations/ws.d.ts' />
 /// <reference path='../../declarations/mongodb.d.ts' />
+/// <reference path='../../declarations/yamljs.d.ts' />
 
 import WebSocket = require('ws');
 import http = require('http');
@@ -10,30 +11,49 @@ import fs = require('fs');
 
 import WebSocketClient from './WebSocketClient';
 
+/**
+ * Base server class. Gets everything running, but should be extended
+ * rather than used directly.
+ */
 export default class MMOOServer {
 	protected _settings:any;
 
 	protected _wsServer:WebSocket.Server;
 	protected _httpServer:http.Server;
+	protected _mongoClient:mongodb.MongoClient = mongodb.MongoClient;
+	protected _db:mongodb.Db;
 
-	protected _wsClients = {};
+	protected _wsClients:Object = {};
+	protected _allowedDAOOperations:Object = {};
 
-	/*protected _wsPort:number;
-	protected _httpPort:number;
-	protected _dbName:string;
-	protected _dbPort:number;
-	protected _dbUser:string;
-	protected _dbPass:string;*/
+	get dbName():string { return this._settings.database.name; }
+	get dbPort():number { return this._settings.database.port; }
+	get dbUser():string { return this._settings.database.user; }
+	get name():string { return this._settings.server.name; }
+	get db():mongodb.Db { return this._db; }
 
 	constructor () {
-
+		this._allowedDAOOperations["checkIfUserExists"] = true;
+		this._allowedDAOOperations["login"] = true;
 	}
 
 	public init() {
-
+		this.loadSettings();
 	}
 
+	public isDAOOperationAllowed(opName:string):boolean {
+		return (this._allowedDAOOperations[opName] === true);
+	}
+
+	protected onReady() {
+		console.log("Server '" + this.name + "' ready!");
+	}
+
+	////////////////////////////////////////
+	// Settings
+	////////////////////////////////////////
 	protected loadSettings() {
+		console.log("Loading settings...");
 		fs.readFile('../../ServerSettings.yaml', this.onSettingsLoaded);
 	}
 
@@ -54,11 +74,44 @@ export default class MMOOServer {
 	// MongoDB
 	////////////////////////////////////////
 	protected connectToDatabase() {
+		console.log("Connecting to database...");
 
+		/*
+		 *	mongodb://kevin:poop@website.com:1337
+		 */
+		var args:Array<string> = [
+			"mongodb://",
+			this.dbUser,
+			":",
+			this._settings.database.pass,
+			"@",
+			this.dbName,
+			":",
+			this.dbPort.toString(),
+
+		];
+		var url:string = args.join("");
+
+		var serverOptions:mongodb.ServerOptions = {
+			poolSize:10
+		}
+		var options:mongodb.MongoClientOptions = {
+			server:serverOptions
+		}
+
+		this._mongoClient.connect(url, options, this.onDatabaseConnection);
 	}
 
-	protected onDatabaseConnection() {
+	protected onDatabaseConnection = (err:mongodb.MongoError, db:mongodb.Db) => {
+		if (err) {
+			console.error("Unable to connect to MongoDB: " + err);
+			process.exit();
+		}
 
+		this._db = db;
+		console.log("Connected to MongoDB at " + this.dbName + ":" + this.dbPort + " as '" + this.dbUser + "'");
+
+		this.startWebSocketServer();
 	}
 
 	////////////////////////////////////////
@@ -69,15 +122,19 @@ export default class MMOOServer {
 	}
 
 	protected startWebSocketServer() {
+		console.log("Starting WebSocket...");
+
 		var port:number = this._settings.networking.wsPort;
 		this._wsServer = new WebSocket.Server({port:port});
 		this._wsServer.on("connection", this.onWebSocketConnect);
 
 		console.log("WebSocket listening on port " + port);
+
+		this.startHttpServer();
 	}
 
 	protected onWebSocketConnect = (webSocket:WebSocket) => {
-		var client:WebSocketClient = new WebSocketClient(webSocket);
+		var client:WebSocketClient = new WebSocketClient(webSocket, this);
 		client.onMessage = this.onClientMessage;
 		client.onDisconnect = this.onClientDisconnect;
 
@@ -97,6 +154,8 @@ export default class MMOOServer {
 	// HTTP
 	////////////////////////////////////////
 	protected startHttpServer() {
+		console.log("Starting HTTP...");
+
 		var port:number = this._settings.networking.httpPort;
 		this._httpServer = http.createServer(this.onHttpRequest);
 		this._httpServer.listen(port, this.onHttpReady);

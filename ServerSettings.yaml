@@ -6,10 +6,10 @@ networking:
 	httpPort: 8989
 
 database:
-	dbName: "mightnot.work"
-	dbPort: 27017
-	dbUser: "admin"
-	dbPass: "AFr80vSbie"
+	name: "mightnot.work"
+	port: 27017
+	user: "admin"
+	pass: "AFr80vSbie"
 
 server:
 	name: "Main"
