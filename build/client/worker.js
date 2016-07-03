@@ -2,7 +2,7 @@
  * Makes sprite sheets!
  */
 
-var Log = require('./util/log');
+var Log = require('./util/Log');
 var AssetCache = require('./../common/AssetCache');
 
 Log.setLogType("worker", new Log.LogType("Worker: ", "#0c0"));
