@@ -1,41 +1,60 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+exports.setLogType = setLogType;
+exports.log = log;
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var types = {};
-var LogType = (function () {
-    function LogType(prefix, textColor, bgColor, enabled) {
-        if (prefix === void 0) { prefix = ""; }
-        if (textColor === void 0) { textColor = "#000"; }
-        if (bgColor === void 0) { bgColor = "#fff"; }
-        if (enabled === void 0) { enabled = true; }
+
+var LogType = exports.LogType = function () {
+    function LogType() {
+        var prefix = arguments.length <= 0 || arguments[0] === undefined ? "" : arguments[0];
+        var textColor = arguments.length <= 1 || arguments[1] === undefined ? "#000" : arguments[1];
+        var bgColor = arguments.length <= 2 || arguments[2] === undefined ? "#fff" : arguments[2];
+        var enabled = arguments.length <= 3 || arguments[3] === undefined ? true : arguments[3];
+
+        _classCallCheck(this, LogType);
+
         this.prefix = prefix;
         this.textColor = textColor;
         this.bgColor = bgColor;
         this.enabled = enabled;
     }
-    LogType.prototype.log = function (msg) {
-        if (this.enabled)
-            console.log("%c" + this.prefix + msg, "background:" + this.bgColor + "; color:" + this.textColor + ";");
-    };
+
+    _createClass(LogType, [{
+        key: "log",
+        value: function log(msg) {
+            if (this.enabled) console.log("%c" + this.prefix + msg, "background:" + this.bgColor + "; color:" + this.textColor + ";");
+        }
+    }]);
+
     return LogType;
-}());
-exports.LogType = LogType;
+}();
+
 function setLogType(name, type) {
-    if (!types.hasOwnProperty(name))
-        types[name] = type;
+    if (!types.hasOwnProperty(name)) types[name] = type;
 }
-exports.setLogType = setLogType;
 function log(typeName, msg) {
-    if (types.hasOwnProperty(typeName))
-        types[typeName].log(msg);
+    if (types.hasOwnProperty(typeName)) types[typeName].log(msg);
 }
-exports.log = log;
+
 
 },{}],2:[function(require,module,exports){
+'use strict';
+
 /*
  * Makes sprite sheets!
  */
 
-var Log = require('./util/log');
+var Log = require('./util/Log');
 var AssetCache = require('./../common/AssetCache');
 
 Log.setLogType("worker", new Log.LogType("Worker: ", "#0c0"));
@@ -51,7 +70,6 @@ var animSets = {};
 var partDefs = {};
 var recolorCache = new AssetCache.default(50);
 
-
 /*
  * Message format:
  * 		{action:string, params:Object, params:ArrayBuffer}
@@ -59,16 +77,22 @@ var recolorCache = new AssetCache.default(50);
  *		worker.postMessage(msg, [msg.params]);
  */
 self.onmessage = function (e) {
-    var msg = e.data;
+	var msg = e.data;
 
-    switch(msg.action) {
-    	case "getSpritesheet": returnSpriteSheet(msg.params); break;
-    	case "newTexture": onNewTexture(msg.params, msg.data); break;
-    	case "getTexture": returnTexture(msg.params); break;
-    	case "newAnimSet": onNewAnimSet(msg.params); break;
-    	case "newPartDef": onNewPartDef(msg.params); break;
-    	default: Log.log("worker", "Unknown action \"" + msg.action + "\"");
-    }
+	switch (msg.action) {
+		case "getSpritesheet":
+			returnSpriteSheet(msg.params);break;
+		case "newTexture":
+			onNewTexture(msg.params, msg.data);break;
+		case "getTexture":
+			returnTexture(msg.params);break;
+		case "newAnimSet":
+			onNewAnimSet(msg.params);break;
+		case "newPartDef":
+			onNewPartDef(msg.params);break;
+		default:
+			Log.log("worker", "Unknown action \"" + msg.action + "\"");
+	}
 };
 
 ////////////////////////////////////////
@@ -99,12 +123,7 @@ function returnSpriteSheet(params) {
 
 	var partMaps = {}; //will hold color maps for each version of each part
 	var animAtlas = {};
-	var x, y, 
-		animName, anim, 
-		frameNum, frame, 
-		pointNum, point, coords, attachedParts, 
-		attachNum, attach, 
-		partDef, offset, partImage, partMap, textureAsset;
+	var x, y, animName, anim, frameNum, frame, pointNum, point, coords, attachedParts, attachNum, attach, partDef, offset, partImage, partMap, textureAsset;
 
 	y = 0;
 
@@ -132,8 +151,8 @@ function returnSpriteSheet(params) {
 				for (attachNum = 0; attachNum < attachedParts.length; attachNum++) {
 					attach = attachedParts[attachNum];
 					partDef = partDefs[attach.part];
-					offset = attach.offet; 
-					if (!offset) offset = [0,0];
+					offset = attach.offet;
+					if (!offset) offset = [0, 0];
 
 					//get the actual image path to use
 					partImage = partDef[altNum];
@@ -156,16 +175,16 @@ function returnSpriteSheet(params) {
 	Log.log("worker", "Generated spritesheet \"" + params.animSet + "\" in " + timeTaken + "ms");
 
 	var msg = {
-		action:"getSpritesheet",
-		params:{
-			width:imageAsset.width,
-			height:imageAsset.height,
-			name:imageAsset.name,
-			atlas:animAtlas,
-			requestKey:params.requestKey
+		action: "getSpritesheet",
+		params: {
+			width: imageAsset.width,
+			height: imageAsset.height,
+			name: imageAsset.name,
+			atlas: animAtlas,
+			requestKey: params.requestKey
 		},
-		data:imageAsset.data.buffer
-	}
+		data: imageAsset.data.buffer
+	};
 	self.postMessage(msg, [msg.data]);
 }
 
@@ -178,13 +197,13 @@ function copyTextureData(source, target, startX, startY) {
 		sourceIndex = (source.width * y + x) * 4;
 		targetIndex = (target.width * (startY + y) + startX + x) * 4;
 		for (var x = 0; x < source.width && x + startX < target.width; x++) {
-			if (sourceData[sourceIndex+3] == 0) continue; //transparent, skip
+			if (sourceData[sourceIndex + 3] == 0) continue; //transparent, skip
 
 			//only opaque and transparent allowed
 			targetData[targetIndex] = sourceData[sourceIndex];
-			targetData[targetIndex+1] = sourceData[sourceIndex+1];
-			targetData[targetIndex+2] = sourceData[sourceIndex+2];
-			targetData[targetIndex+3] = 255;
+			targetData[targetIndex + 1] = sourceData[sourceIndex + 1];
+			targetData[targetIndex + 2] = sourceData[sourceIndex + 2];
+			targetData[targetIndex + 3] = 255;
 
 			sourceIndex += 4;
 			targetIndex += 4;
@@ -197,8 +216,8 @@ function copyTextureData(source, target, startX, startY) {
  * by the recolor functions below
  *
  * ick!
- */ 
-getPartColorMap = function(partMaps, part, colorMap) {
+ */
+getPartColorMap = function getPartColorMap(partMaps, part, colorMap) {
 	var map = partMaps[part.name];
 	if (map) return map;
 
@@ -208,7 +227,7 @@ getPartColorMap = function(partMaps, part, colorMap) {
 	var colorNames = Object.keys(part.colors);
 	var colorName;
 	colorNames.sort(); //ensure successive getTexture calls generate the same key for the same colors
-	for (var i = colorNames.length-1; i >= 0; i--) {
+	for (var i = colorNames.length - 1; i >= 0; i--) {
 		colorName = colorNames[i];
 		toColor = colorMap[colorName];
 		if (!toColor) continue;
@@ -219,9 +238,9 @@ getPartColorMap = function(partMaps, part, colorMap) {
 	map.key = JSON.stringify(map.to);
 	partMaps[part.name] = map;
 	return map;
-}
+};
 
-getSpritesheetDimensions = function(animSet) {
+getSpritesheetDimensions = function getSpritesheetDimensions(animSet) {
 	var width = 0;
 	var height = 0;
 	var anim, animWidth;
@@ -233,45 +252,45 @@ getSpritesheetDimensions = function(animSet) {
 	}
 
 	return [width, height];
-}
+};
 
-onNewAnimSet = function(params) {
+onNewAnimSet = function onNewAnimSet(params) {
 	animSets[params.name] = params.animSet;
-}
+};
 
-onNewPartDef = function(params) {
+onNewPartDef = function onNewPartDef(params) {
 	partDefs[params.name] = params.partDef;
-}
+};
 
 ////////////////////////////////////////
 // recolor functions
 ////////////////////////////////////////
 
 //stores a copy of an uncolored texture for later use
-onNewTexture = function(params, data) {
+onNewTexture = function onNewTexture(params, data) {
 	var asset = new TextureAsset(params.name, params.width, params.height, data);
 	textureAssets[params.name] = asset;
-}
+};
 
 //returns a copy of a colored texture to the main thread
-returnTexture = function(params) {
+returnTexture = function returnTexture(params) {
 	var asset = getTexture(params.name, params.colorMap);
 	params.width = asset.width;
 	params.height = asset.height;
 	self.postMessage({
-		action:"getTexture",
-		params:{
-			name:asset.name,
-			width:asset.width,
-			height:asset.height,
-			requestKey:params.requestKey
+		action: "getTexture",
+		params: {
+			name: asset.name,
+			width: asset.width,
+			height: asset.height,
+			requestKey: params.requestKey
 		},
-		data:asset.data.buffer
+		data: asset.data.buffer
 	});
-}
+};
 
 //retrieves or creates a colored texture
-getTexture = function(name, colorMap) {
+getTexture = function getTexture(name, colorMap) {
 	if (colorMap.key) colorMap.key = JSON.stringify(colorMap.to);
 	var key = name + "|" + colorMap.key;
 	var texture = recolorCache.get(key);
@@ -283,10 +302,10 @@ getTexture = function(name, colorMap) {
 	}
 
 	return texture;
-}
+};
 
 //guess what this does
-createTexture = function(name, colorMap) {
+createTexture = function createTexture(name, colorMap) {
 	var asset = textureAssets[name];
 	var totalPixels = asset.width * asset.height;
 	var data = asset.data;
@@ -309,27 +328,27 @@ createTexture = function(name, colorMap) {
 		if (currentR != prevR) toColor = toRGB[fromR.indexOf(currentR)];
 		if (toColor) {
 			newData[i] = toColor[0];
-			newData[i+1] = toColor[1];
-			newData[i+2] = toColor[2];
-			newData[i+3] = 255;
+			newData[i + 1] = toColor[1];
+			newData[i + 2] = toColor[2];
+			newData[i + 3] = 255;
 		} else {
 			newData[i] = data[i];
-			newData[i+1] = data[i+1];
-			newData[i+2] = data[i+2];
-			newData[i+3] = data[i+3];
+			newData[i + 1] = data[i + 1];
+			newData[i + 2] = data[i + 2];
+			newData[i + 3] = data[i + 3];
 		}
 		prevR = currentR;
 	}
 
 	return new TextureAsset(name, asset.width, asset.height, newData);
-}
+};
 
-hexToRGB = function(hex){
-    var r = hex >> 16;
-    var g = hex >> 8 & 0xFF;
-    var b = hex & 0xFF;
-    return [r,g,b];
-}
+hexToRGB = function hexToRGB(hex) {
+	var r = hex >> 16;
+	var g = hex >> 8 & 0xFF;
+	var b = hex & 0xFF;
+	return [r, g, b];
+};
 
 ////////////////////////////////////////
 // params classes
@@ -347,43 +366,65 @@ function ColorMap() {
 	this.to = [];
 	this.key = "[]";
 }
-},{"./../common/AssetCache":3,"./util/log":1}],3:[function(require,module,exports){
+
+},{"./../common/AssetCache":3,"./util/Log":1}],3:[function(require,module,exports){
 "use strict";
-var AssetCache = (function () {
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var AssetCache = function () {
     function AssetCache(capacity) {
+        _classCallCheck(this, AssetCache);
+
         this._assets = {};
         this._keyQueue = [];
         this._capacity = capacity;
     }
-    Object.defineProperty(AssetCache.prototype, "capacity", {
-        get: function () { return this._capacity; },
-        set: function (value) { this._capacity = value; this.removeExcess(); },
-        enumerable: true,
-        configurable: true
-    });
-    AssetCache.prototype.get = function (key) {
-        var asset = this._assets[key];
-        if (!asset)
-            asset = null;
-        return asset;
-    };
-    AssetCache.prototype.set = function (key, asset) {
-        if (this.get(key) === null)
-            return;
-        this._assets[key] = asset;
-        this._keyQueue.push(key);
-        this.removeExcess();
-    };
-    AssetCache.prototype.removeExcess = function () {
-        if (this._capacity < 1)
-            return;
-        while (this._keyQueue.length > this._capacity) {
-            delete this._assets[this._keyQueue.shift()];
+
+    _createClass(AssetCache, [{
+        key: "get",
+        value: function get(key) {
+            var asset = this._assets[key];
+            if (!asset) asset = null;
+            return asset;
         }
-    };
+    }, {
+        key: "set",
+        value: function set(key, asset) {
+            if (this.get(key) === null) return;
+            this._assets[key] = asset;
+            this._keyQueue.push(key);
+            this.removeExcess();
+        }
+    }, {
+        key: "removeExcess",
+        value: function removeExcess() {
+            if (this._capacity < 1) return;
+            while (this._keyQueue.length > this._capacity) {
+                delete this._assets[this._keyQueue.shift()];
+            }
+        }
+    }, {
+        key: "capacity",
+        get: function get() {
+            return this._capacity;
+        },
+        set: function set(value) {
+            this._capacity = value;this.removeExcess();
+        }
+    }]);
+
     return AssetCache;
-}());
-Object.defineProperty(exports, "__esModule", { value: true });
+}();
+
+
+
 exports.default = AssetCache;
 
 },{}]},{},[2]);

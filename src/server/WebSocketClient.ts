@@ -6,7 +6,8 @@
 /// <reference path='../../declarations/ws.d.ts' />
 
 
-import WebSocket = require('ws');
+//import WebSocket = require('ws');
+import * as WebSocket from 'ws';
 import MMOOServer from './MMOOServer';
 import User from './user/User';
 import ClientDAO from './dao/ClientDAO';

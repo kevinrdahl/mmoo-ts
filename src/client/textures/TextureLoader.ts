@@ -1,5 +1,5 @@
 /// <reference path="../../../declarations/pixi.js.d.ts"/>
-import Log = require('../util/Log');
+import * as Log from '../util/Log';
 
 export default class TextureLoader {
 	private _sheet:PIXI.BaseTexture = null;

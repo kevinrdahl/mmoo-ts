@@ -1,6 +1,7 @@
 /// <reference path='../../../declarations/mongodb.d.ts' />
 
-import mongodb = require('mongodb');
+//import mongodb = require('mongodb');
+import * as mongodb from 'mongodb';
 
 import DAOOperation from './DAOOperation';
 import User from '../user/User';

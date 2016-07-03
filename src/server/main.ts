@@ -2,7 +2,7 @@
 /// <reference path='../../declarations/ws.d.ts' />
 'use strict';
 
-import WebSocket = require('ws');
+import * as WebSocket from 'ws';
 
 var port: number = process.env.PORT || 3000;
 var WebSocketServer = WebSocket.Server;

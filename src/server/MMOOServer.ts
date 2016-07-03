@@ -3,11 +3,16 @@
 /// <reference path='../../declarations/mongodb.d.ts' />
 /// <reference path='../../declarations/yamljs.d.ts' />
 
-import WebSocket = require('ws');
+/*import WebSocket = require('ws');
 import http = require('http');
 import mongodb = require('mongodb');
 import YAML = require('yamljs');
-import fs = require('fs');
+import fs = require('fs');*/
+import * as WebSocket from 'ws';
+import * as http from 'http';
+import * as mongodb from 'mongodb';
+import * as YAML from 'yamljs';
+import * as fs from 'fs';
 
 import WebSocketClient from './WebSocketClient';
 
