@@ -1,12 +1,14 @@
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 /// <reference path="../../declarations/createjs/soundjs.d.ts"/>
 
-import Log = require('./util/Log');
+//import Log = require('./util/Log');
+import * as Log from './util/Log';
 import Connection from './Connection';
 import TextureLoader from './textures/TextureLoader';
 import TextureWorker from './textures/TextureWorker';
 import SoundManager from './sound/SoundManager';
-import SoundAssets = require('./sound/SoundAssets');
+//import SoundAssets = require('./sound/SoundAssets');
+import * as SoundAssets from './sound/SoundAssets';
 
 import InterfaceElement from './interface/InterfaceElement';
 import Panel from './interface/Panel';
@@ -157,7 +159,7 @@ export default class Game {
 		this.sendGraphicsToWorker();
 		this.loadSounds();
 
-		this.textureWorker.getTexture('parts/helmet', {from:[0x555555], to:[0xff0000]}, this.onTextureWorkerGetTexture);	
+		this.textureWorker.getTexture('parts/helmet', {from:[0x555555], to:[0xff0000]}, this.onTextureWorkerGetTexture);
 	}
 
 	private sendGraphicsToWorker() {

@@ -1,5 +1,6 @@
 /// <reference path="../../../declarations/pixi.js.d.ts"/>
-import ColorUtil = require('../util/ColorUtil');
+//import ColorUtil = require('../util/ColorUtil');
+import * as ColorUtil from '../util/ColorUtil';
 
 export default class TextureWorker {
 	private static _supportsImageDataConstructor = -1;
@@ -40,7 +41,7 @@ export default class TextureWorker {
 		this._callbacks[requestKey] = callback;
 
 		this._worker.postMessage({
-			action:"getTexture", 
+			action:"getTexture",
 			params:{
 				name:name,
 				colorMap:colorMap,
@@ -62,7 +63,7 @@ export default class TextureWorker {
 		var height = params.height;
 		var dataArray = new Uint8ClampedArray(data);
 		var requestKey = params.requestKey;
-		
+
 		var callback = this._callbacks[requestKey];
 		if (callback) {
 			callback(requestKey, this.textureFromArray(dataArray, width, height));
@@ -72,11 +73,11 @@ export default class TextureWorker {
 
 	private textureFromArray(dataArray:Uint8ClampedArray, width:number, height:number):PIXI.Texture {
 		try {
-			var imageData = new ImageData(dataArray, width, height); //if on Edge, this will throw an error	
+			var imageData = new ImageData(dataArray, width, height); //if on Edge, this will throw an error
 		} catch (e) {
 			return this.textureFromArrayEdge(dataArray, width, height);
 		}
-		
+
 		var canvas = document.createElement('canvas');
 		var context = canvas.getContext('2d');
 		canvas.width = width;
@@ -104,7 +105,7 @@ export default class TextureWorker {
 		for (var i = 0; i < dataArray.length; i += 4) {
 			same = false;
 			if (x < width-1) same = this.compareRGBA(dataArray, i, i+4);
-			
+
 			if (same && runStart == -1) {
 				runStart = x;
 			} else if (!same) {

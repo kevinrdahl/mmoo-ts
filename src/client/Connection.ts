@@ -1,5 +1,5 @@
-import Util = require('../common/Util');
-import Log = require('./util/Log');
+import * as Util from '../common/Util'; //import Util = require('../common/Util');
+import * as Log from './util/Log'; //import Log = require('./util/Log');
 
 export default class Connection {
     public onConnect: ()=> void;
