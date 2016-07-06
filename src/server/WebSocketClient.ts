@@ -8,7 +8,7 @@
 
 //import WebSocket = require('ws');
 import * as WebSocket from 'ws';
-import MMOOServer from './MMOOServer';
+import BaseServer from './BaseServer';
 import User from './user/User';
 import ClientDAO from './dao/ClientDAO';
 
@@ -25,15 +25,15 @@ export default class WebSocketClient {
 	protected static _idNum:number = 0;
 	protected _id:string;
 	protected _socket:WebSocket;
-	protected _server:MMOOServer;
+	protected _server:BaseServer;
 	protected _dao:ClientDAO;
 	protected _user:User = null;
 
 	get id():string { return this._id; }
-	get server():MMOOServer { return this._server; }
+	get server():BaseServer { return this._server; }
 	get user():User { return this._user; }
 
-	constructor(socket:WebSocket, server:MMOOServer) {
+	constructor(socket:WebSocket, server:BaseServer) {
 		this._id = WebSocketClient._idNum.toString();
 		WebSocketClient._idNum++;
 

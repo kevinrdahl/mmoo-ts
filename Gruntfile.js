@@ -12,8 +12,8 @@ module.exports = function(grunt) {
     watch: {
       js: {
         files: ['build/client/**/*.js', 'build/common/**/*.js'],
-        //tasks: ['browserify:main', 'browserify:worker']
-        tasks: ['exec:main', 'exec:worker']
+        tasks: ['browserify:main', 'browserify:worker']
+        //tasks: ['exec:main', 'exec:worker']
       },
       ts: {
         files: ['src/**/*.ts'],
@@ -23,12 +23,7 @@ module.exports = function(grunt) {
     browserify: {
       main:{
          src: './build/client/main.js',
-         dest: './public/js/mmoo-client.js',
-         options: {
-          transform: [
-            ['babelify', {}]
-          ]
-         }
+         dest: './public/js/mmoo-client.js'
       },
 
       worker:{
@@ -38,11 +33,10 @@ module.exports = function(grunt) {
     },
     ts: {
       default : {
-        //target: ['es6'],
         src: ["src/**/*.ts"],
         outDir: "build",
         options:{
-          target: 'es2015'
+          target: 'es5'
         }
       }
     },
@@ -57,6 +51,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-ts');
   grunt.loadNpmTasks('grunt-concurrent');
   grunt.loadNpmTasks('grunt-exec');
-  //grunt.registerTask('default', ['ts', 'browserify:main', 'browserify:worker', 'concurrent:both']);
-  grunt.registerTask('default', ['ts', 'exec:main', 'exec:worker', 'concurrent:both']);
+  grunt.registerTask('default', ['ts', 'browserify:main', 'browserify:worker', 'concurrent:both']);
+  //grunt.registerTask('default', ['ts', 'exec:main', 'exec:worker', 'concurrent:both']);
 }

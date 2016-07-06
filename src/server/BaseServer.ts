@@ -3,11 +3,6 @@
 /// <reference path='../../declarations/mongodb.d.ts' />
 /// <reference path='../../declarations/yamljs.d.ts' />
 
-/*import WebSocket = require('ws');
-import http = require('http');
-import mongodb = require('mongodb');
-import YAML = require('yamljs');
-import fs = require('fs');*/
 import * as WebSocket from 'ws';
 import * as http from 'http';
 import * as mongodb from 'mongodb';
@@ -20,7 +15,8 @@ import WebSocketClient from './WebSocketClient';
  * Base server class. Gets everything running, but should be extended
  * rather than used directly.
  */
-export default class MMOOServer {
+export default class BaseServer {
+	protected _settingsPath:string;
 	protected _settings:any;
 
 	protected _wsServer:WebSocket.Server;
@@ -37,7 +33,9 @@ export default class MMOOServer {
 	get name():string { return this._settings.server.name; }
 	get db():mongodb.Db { return this._db; }
 
-	constructor () {
+	constructor (settingsPath:string) {
+		this._settingsPath = settingsPath;
+
 		this._allowedDAOOperations["checkIfUserExists"] = true;
 		this._allowedDAOOperations["login"] = true;
 	}
@@ -59,7 +57,7 @@ export default class MMOOServer {
 	////////////////////////////////////////
 	protected loadSettings() {
 		console.log("Loading settings...");
-		fs.readFile('../../ServerSettings.yaml', this.onSettingsLoaded);
+		fs.readFile(this._settingsPath, this.onSettingsLoaded);
 	}
 
 	protected onSettingsLoaded = (err:NodeJS.ErrnoException, data:Buffer) => {
@@ -72,6 +70,7 @@ export default class MMOOServer {
 			this.connectToDatabase();
 		} catch (e) {
 			console.error("Failed to parse settings YAML");
+			console.log(e);
 		}
 	}
 

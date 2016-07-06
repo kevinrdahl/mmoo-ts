@@ -2,14 +2,14 @@
 #(Mainly so I can run them on the same server for dev)
 
 networking:
-	wsPort: 9191
-	httpPort: 8989
+  wsPort: 9191
+  httpPort: 8989
 
 database:
-	name: "mightnot.work"
-	port: 27017
-	user: "admin"
-	pass: "AFr80vSbie"
+  name: "mightnot.work"
+  port: 27017
+  user: "admin"
+  pass: "AFr80vSbie"
 
 server:
-	name: "Main"
+  name: "Main"
