@@ -5,12 +5,12 @@
 
 /// <reference path='../../declarations/ws.d.ts' />
 
-
-//import WebSocket = require('ws');
 import * as WebSocket from 'ws';
 import BaseServer from './BaseServer';
 import User from './user/User';
 import ClientDAO from './dao/ClientDAO';
+import Message from '../common/messages/Message';
+import * as MessageTypes from '../common/messages/MessageTypes';
 
 /**
  * Specifically handles WebSocket messages. Once the message's
@@ -54,6 +54,27 @@ export default class WebSocketClient {
 	}
 
 	protected _onMessage = (data:string) => {
+		var message:Message = Message.parse(data);
+
+		if (message) {
+			switch(message.type) {
+				case MessageTypes.PING:
+					console.log(this._id + ": Ping");
+					break;
+
+				case MessageTypes.USER:
+					console.log(this._id + ": User");
+					break;
+
+				case MessageTypes.CRYPTO:
+					console.log(this._id + ": Secure");
+					break;
+
+				default:
+					console.log("Unkown message type " + message.type);
+			}
+		}
+
 		this.onMessage(this, data);
 	};
 

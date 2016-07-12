@@ -52,5 +52,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-concurrent');
   grunt.loadNpmTasks('grunt-exec');
   grunt.registerTask('default', ['ts', 'browserify:main', 'browserify:worker', 'concurrent:both']);
+  grunt.registerTask('build', ['ts', 'browserify:main', 'browserify:worker']);
   //grunt.registerTask('default', ['ts', 'exec:main', 'exec:worker', 'concurrent:both']);
 }

@@ -1,38 +1,27 @@
 import IDPool from '../IDPool';
 import Vector2D from '../Vector2D';
+//import * as MessageTypes from './MessageTypes'; moved this to bottom because of circular referencing gone wrong
+import * as Util from '../Util';
 
 export default class Message {
-	private static _typesByIndex = [
-		//create account, log in, character management
-		'user',
-		//get worlds, sign in as character, terrain info
-		'world',
-		//get key, send any other kind of message
-		'secure',
-
-		'ping'
-	];
-	private static _typesByName:any = null;
 	private static _abbreviations:any = null;
 	private static _expansions:any = null;
 
 	public type:number;
 	public params:any;
 
-	constructor(type:number, params:any) {
+	constructor(type:number) {
 		this.type = type;
-		this.params = params;
 	}
 
 	public serialize():string {
-		return this.type.toString() + '|' + Message.serializeParams(this.params);
+		return this.type.toString();
 	}
 
+	//<type>[arg1, arg2, ..., argN]
 	public static parse(s:string):Message {
-		//split at the first bar
-		var splitIndex = s.indexOf('|');
+		var splitIndex = s.indexOf('[');
 		if (splitIndex === -1) {
-			//messages with no payload should include the splitter anyway
 			return null;
 		}
 
@@ -41,26 +30,28 @@ export default class Message {
 			return null;
 		}
 
-		var params;
+		var args;
 		try {
-			params = JSON.parse('{' + s.substring(splitIndex+1) + '}');
+			args = JSON.parse(s.substring(splitIndex));
 		} catch (e) {
 			return null;
 		}
-		Message.expand(params);
+		if (!Util.isArray(args)) return null;
+
+		var msgClass = MessageTypes.getClassByType(msgType);
+		if (!msgClass) {
+			return null;
+		}
+
+		var msg = msgClass.fromArgs(args);
+		if (msg) return msg;
+		return null;
 
 		//decrypt, if applicable
-
-		return new Message(msgType, params);
 	}
 
-	public static getTypeId (name:string) {
-		if (Message._typesByName == null) Message.generateTypesByName();
-		return Message._typesByName[name];
-	}
-
-	public static getTypeName (id:number) {
-		return Message._typesByIndex[id];
+	public static fromArgs(args:Array<any>) {
+		return null;
 	}
 
 	////////////////////////////////////////
@@ -72,7 +63,7 @@ export default class Message {
 	}
 
 	//returns an object with shorter keys using the abbreviations list
-	private static abbreviate (obj:any) {
+	public static abbreviate (obj:any) {
 		var clone = {};
 		var keys = Object.keys(obj);
 		var key, val;
@@ -142,11 +133,6 @@ export default class Message {
 	////////////////////////////////////////
 	// private static inits
 	////////////////////////////////////////
-	private static generateTypesByName() {
-		for (var i = 0; i < Message._typesByIndex.length; i++) {
-			Message._typesByName[Message._typesByIndex[i]] = i;
-		}
-	}
 
 	private static generateAbbreviations() {
 		Message._abbreviations = {};
@@ -179,7 +165,7 @@ export default class Message {
 		];
 		var pool = new IDPool();
 		var term, abbreviation;
-		
+
 		for (var i = 0; i < terms.length; i++) {
 			term = terms[i];
 			abbreviation = '?' + pool.getID();
@@ -188,3 +174,5 @@ export default class Message {
 		}
 	}
 }
+
+import * as MessageTypes from './MessageTypes';
