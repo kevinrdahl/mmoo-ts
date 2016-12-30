@@ -18,6 +18,9 @@ export function shallowCopy(obj:Object):Object {
 ////////////////////////////////////////
 // Strings
 ////////////////////////////////////////
+/**
+ * Slight misnomer. Removes the first and last characters from a string. Assumes it is long enough to do so.
+ */
 export function stripBraces(s:string):string {
     //might more accurately be called stripFirstAndLastCharacters but that's LONG
     return s.substr(1, s.length-1);
@@ -56,6 +59,9 @@ export function isObject(x, allowNull:boolean=false):boolean {
     return (typeof x === 'object' && !isArray(x) && (x != null || allowNull));
 }
 
+/**
+ * Returns true if x is an array of two numbers.
+ */
 export function isCoordinate(x):boolean {
     return (isArray(x) && x.length == 2 && isNumber(x[0]) && isNumber(x[1]));
 }

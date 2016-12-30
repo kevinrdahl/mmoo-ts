@@ -1,15 +1,25 @@
-#This is for the main server. Others should have different ports.
-#(Mainly so I can run them on the same server for dev)
-
 networking:
   wsPort: 9191
   httpPort: 8989
 
-database:
+#phasing this out
+mongo:
   name: "mightnot.work"
   port: 27017
   user: "admin"
   pass: "AFr80vSbie"
 
+mysql:
+  host: "mightnot.work"
+  user: "mmoo"
+  password: "a series of parallel lines"
+  database: "mmoo-ts"
+  connections: 10
+
 server:
   name: "Main"
+
+debug:
+  isDebug: true
+  wholeNewWorld: true
+  tempUsers: true

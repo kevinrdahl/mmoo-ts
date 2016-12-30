@@ -9,7 +9,10 @@ import * as mongodb from 'mongodb';
 import * as YAML from 'yamljs';
 import * as fs from 'fs';
 
+let mysql = require('mysql');
+
 import WebSocketClient from './WebSocketClient';
+import FunctionQueue from '../common/FunctionQueue';
 
 /**
  * Base server class. Gets everything running, but should be extended
@@ -22,16 +25,17 @@ export default class BaseServer {
 	protected _wsServer:WebSocket.Server;
 	protected _httpServer:http.Server;
 	protected _mongoClient:mongodb.MongoClient = mongodb.MongoClient;
-	protected _db:mongodb.Db;
+	protected _mongo:mongodb.Db;
+	protected _mysqlPool;
 
 	protected _wsClients:Object = {};
 	protected _allowedDAOOperations:Object = {};
 
-	get dbName():string { return this._settings.database.name; }
-	get dbPort():number { return this._settings.database.port; }
-	get dbUser():string { return this._settings.database.user; }
+	get mongoName():string { return this._settings.mongo.name; }
+	get mongoPort():number { return this._settings.mongo.port; }
+	get mongoUser():string { return this._settings.mongo.user; }
 	get name():string { return this._settings.server.name; }
-	get db():mongodb.Db { return this._db; }
+	get mongo():mongodb.Db { return this._mongo; }
 
 	constructor (settingsPath:string) {
 		this._settingsPath = settingsPath;
@@ -40,8 +44,9 @@ export default class BaseServer {
 		this._allowedDAOOperations["login"] = true;
 	}
 
+	protected _initQueue:FunctionQueue;
 	public init() {
-		this.loadSettings();
+		this.loadSettings(); //rest of init takes place in onSettingsLoadedSuccess
 	}
 
 	public isDAOOperationAllowed(opName:string):boolean {
@@ -67,55 +72,32 @@ export default class BaseServer {
 		var s:string = data.toString();
 		try {
 			this._settings = YAML.parse(s);
-			this.connectToDatabase();
+			this.onSettingsLoadedSuccess();
 		} catch (e) {
 			console.error("Failed to parse settings YAML");
 			console.log(e);
 		}
 	}
 
-	////////////////////////////////////////
-	// MongoDB
-	////////////////////////////////////////
-	protected connectToDatabase() {
-		console.log("Connecting to database...");
+	protected onSettingsLoadedSuccess() {
+		this.initMySQLPool();
+		this.initWebSocketServer();
+		this.initHttpServer();
 
-		/*
-		 *	mongodb://kevin:poop@website.com:1337
-		 */
-		var args:Array<string> = [
-			"mongodb://",
-			this.dbUser,
-			":",
-			this._settings.database.pass,
-			"@",
-			this.dbName,
-			":",
-			this.dbPort.toString(),
-
-		];
-		var url:string = args.join("");
-
-		var serverOptions:mongodb.ServerOptions = {
-			poolSize:10
-		}
-		var options:mongodb.MongoClientOptions = {
-			server:serverOptions
-		}
-
-		this._mongoClient.connect(url, options, this.onDatabaseConnection);
+		this.onReady();
 	}
 
-	protected onDatabaseConnection = (err:mongodb.MongoError, db:mongodb.Db) => {
-		if (err) {
-			console.error("Unable to connect to MongoDB: " + err);
-			process.exit();
-		}
-
-		this._db = db;
-		console.log("Connected to MongoDB at " + this.dbName + ":" + this.dbPort + " as '" + this.dbUser + "'");
-
-		this.startWebSocketServer();
+	////////////////////////////////////////
+	// MySQL
+	////////////////////////////////////////
+	protected initMySQLPool() {
+		this._mysqlPool = mysql.createPool({
+			connectionLimit	: this._settings.mysql.connections,
+			host					: this._settings.mysql.host,
+			user					: this._settings.mysql.user,
+			password				: this._settings.mysql.password,
+			database				: this._settings.mysql.database
+		});
 	}
 
 	////////////////////////////////////////
@@ -125,7 +107,7 @@ export default class BaseServer {
 		return (typeof this._wsClients[client.id] !== 'undefined');
 	}
 
-	protected startWebSocketServer() {
+	protected initWebSocketServer() {
 		console.log("Starting WebSocket...");
 
 		var port:number = this._settings.networking.wsPort;
@@ -133,8 +115,6 @@ export default class BaseServer {
 		this._wsServer.on("connection", this.onWebSocketConnect);
 
 		console.log("WebSocket listening on port " + port);
-
-		this.startHttpServer();
 	}
 
 	protected onWebSocketConnect = (webSocket:WebSocket) => {
@@ -146,18 +126,24 @@ export default class BaseServer {
 	}
 
 	protected onClientMessage = (client:WebSocketClient, msg:string) => {
-		console.log(client.id + ": " + msg);
+		//console.log(client.id + ": " + msg);
 	}
 
 	protected onClientDisconnect = (client:WebSocketClient) => {
 		delete this._wsClients[client.id];
 	}
 
+	/**
+	 * When a WebSocketClient obatins a User, it calls this
+	 */
+	public onClientLogin(client:WebSocketClient) {
+		console.log("Client " + client.id + " logged in as User " + client.user.id + "(" + client.user.name + ")");
+	}
 
 	////////////////////////////////////////
 	// HTTP
 	////////////////////////////////////////
-	protected startHttpServer() {
+	protected initHttpServer() {
 		console.log("Starting HTTP...");
 
 		var port:number = this._settings.networking.httpPort;

@@ -2,23 +2,32 @@
 import Vector2D from '../../common/Vector2D';
 import AttachInfo from './AttachInfo';
 import ResizeInfo from './ResizeInfo';
-
+import InputManager from './InputManager';
 import Game from '../Game';
 
+/**
+ * Base class for anything in the UI. Has a parent and can have children, like DOM elements.
+ */
 export default class InterfaceElement {
 	public id:String = "";
 	public name:String = "";
 	public clickable:boolean = false;
 	public draggable:boolean = false;
+	public useOwnBounds:boolean = true; //instead of the container's bounds, use the rect defined by own x,y,width,height
 	public dragElement:InterfaceElement = null;
 	public maskSprite:PIXI.Sprite = null;
 
-	public onMouseDown = null;
-	public onMouseUp = null;
-	public onClick = null;
-	public onHoverStart = null;
-	public onHoverEnd = null;
-	public onChange = null;
+	public onMouseDown:(coords:Vector2D)=>void;
+	public onMouseUp:(coords:Vector2D)=>void;
+	public onClick:(coords:Vector2D)=>void;
+	public onHoverStart:(coords:Vector2D)=>void;
+	public onHoverEnd:(coords:Vector2D)=>void;
+	public onFocus:()=>void;
+	public onUnfocus:()=>void;
+	public onChange:()=>void;
+	public onKeyDown:(which:string)=>void;
+	public onKeyUp:(which:string)=>void;
+	public onKeyPress:(which:string)=>void; //See jQuery documentation for how these differ
 
 	protected _displayObject:PIXI.Container = new PIXI.Container();
 	protected _parent:InterfaceElement = null;
@@ -52,6 +61,8 @@ export default class InterfaceElement {
 
 		return s;
 	}
+	get isRoot():boolean { return this._parent == null && this._displayObject.parent != null; }
+	get isFocused():boolean { return InputManager.instance.focusedElement == this; }
 
 	//=== SET ===
 	set position(pos:Vector2D) { this._position.set(pos); this.updateDisplayObjectPosition(); }
@@ -60,9 +71,24 @@ export default class InterfaceElement {
 
 	public getElementAtPoint(point:Vector2D):InterfaceElement {
 		var element:InterfaceElement = null;
-		var bounds = this._displayObject.getBounds();
+		var checkChildren:boolean = this.isRoot;
 
-		if (bounds.contains(point.x, point.y)) {
+		if (!checkChildren)
+		{
+			var bounds:PIXI.Rectangle;
+
+			if (this.useOwnBounds) {
+				//note: this assumes that children are all within the bounds of this object
+				var pos:Vector2D = this.getGlobalPosition();
+				bounds = new PIXI.Rectangle(pos.x, pos.y, this._width, this._height);
+			} else {
+				bounds = this._displayObject.getBounds();
+			}
+
+			checkChildren = bounds.contains(point.x, point.y);
+		}
+
+		if (checkChildren) {
 			//Work backwards. Most recently added children are on top.
 			for (var i = this._children.length-1; i >= 0; i--) {
 				element = this._children[i].getElementAtPoint(point);
@@ -79,10 +105,27 @@ export default class InterfaceElement {
 		return element;
 	}
 
-	//BFS by id, always call from the lowest known ancestor
-	//Hey kid, don't make cyclical structures. I'm putting maxChecks here anyway, just in case.
+
 	public getElementById(id:string, maxChecks:number = 1000) {
 		if (this.id == id) return this;
+
+		return this.getElementByFunction(function(e:InterfaceElement) {
+			return e.id == id;
+		});
+	}
+
+	public getElement(e:InterfaceElement) {
+		if (this == e) return this; //derp
+
+		return this.getElementByFunction(function(e2:InterfaceElement) {
+			return e2 == e;
+		});
+	}
+
+	//BFS, always call from the lowest known ancestor
+	//Hey kid, don't make cyclical structures. I'm putting maxChecks here anyway, just in case.
+	public getElementByFunction(func:(e:InterfaceElement)=>boolean, maxChecks:number = 500) {
+		if (func(this)) return this;
 
 		var toCheck:Array<InterfaceElement> = [this];
 		var element:InterfaceElement;
@@ -95,13 +138,13 @@ export default class InterfaceElement {
 			len = element._children.length;
 			for (i = 0; i < len; i++) {
 				child = element._children[i];
-				if (child.id == id) return child;
+				if (func(child)) return child;
 				toCheck.push(child);
 			}
 			maxChecks -= 1;
 		}
 
-		if (maxChecks <= 900) console.warn("Wasting cycles on InterfaceElement.getElementById");
+		if (maxChecks <= 400) console.warn("Wasting cycles on InterfaceElement.getElementById");
 		else if (maxChecks == 0) console.warn("Wasting LOTS of cycles on InterfaceElement.getElementById");
 
 		return null;
@@ -189,8 +232,8 @@ export default class InterfaceElement {
 	}
 
 	public positionRelativeTo(other:InterfaceElement, info:AttachInfo) {
-		this._position.x = other._position.x + (other._width * info.to.x) - (this.width * info.from.x) + info.offset.x;
-		this._position.y = other._position.y + (other._height * info.to.y) - (this.height * info.from.y) + info.offset.y;
+		this._position.x = (other._width * info.to.x) - (this.width * info.from.x) + info.offset.x;
+		this._position.y = (other._height * info.to.y) - (this.height * info.from.y) + info.offset.y;
 
 		if (other != this._parent && other._parent != this._parent)
 		{
@@ -239,7 +282,6 @@ export default class InterfaceElement {
 			if (this._resize.fill.y > 0) height = this._parent._height * this._resize.fill.y - this._resize.padding.y * 2;
 
 			this.resize(width, height);
-			this.onResize();
 		} else if (this._attach) {
 			this.positionRelativeTo(this._parent, this._attach);
 		}

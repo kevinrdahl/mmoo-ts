@@ -96,7 +96,10 @@ export default class Message {
 	// parsing
 	////////////////////////////////////////
 
-	//NOTE: this is in-place!
+	/**
+	 * Replaces abbreviated keys with their full counterparts.
+	 * NOTE: this is in-place!
+	 */
 	private static expand (obj:any) {
 		var keys = Object.keys(obj);
 		var key, val, fullKey;

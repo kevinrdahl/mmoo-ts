@@ -56,7 +56,7 @@ var Connection = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Connection;
 
-},{"./util/Log":12}],2:[function(require,module,exports){
+},{"./util/Log":14}],2:[function(require,module,exports){
 "use strict";
 var Log = require('./util/Log');
 var Connection_1 = require('./Connection');
@@ -67,24 +67,20 @@ var SoundAssets = require('./sound/SoundAssets');
 var InterfaceElement_1 = require('./interface/InterfaceElement');
 var TextElement_1 = require('./interface/TextElement');
 var AttachInfo_1 = require('./interface/AttachInfo');
+var MainMenu_1 = require('./interface/prefabs/MainMenu');
+var InputManager_1 = require('./interface/InputManager');
 var Game = (function () {
     function Game(viewDiv) {
-        var _this = this;
-        this.viewDiv = viewDiv;
         this.stage = null;
         this.renderer = null;
+        this.viewDiv = null;
         this.viewWidth = 500;
         this.viewHeight = 500;
         this._volatileGraphics = new PIXI.Graphics();
         this._documentResized = true;
         this.onTextureWorkerGetTexture = function (requestKey, texture) {
-            var sprite = new PIXI.Sprite(texture);
-            sprite.scale.x = 5;
-            sprite.scale.y = 5;
-            sprite.position.x = 100;
-            sprite.position.y = 100;
-            _this.stage.addChild(sprite);
         };
+        this.viewDiv = viewDiv;
     }
     Object.defineProperty(Game.prototype, "volatileGraphics", {
         get: function () { this._volatileGraphics.clear(); return this._volatileGraphics; },
@@ -113,6 +109,7 @@ var Game = (function () {
         this.interfaceRoot.id = "root";
         this.interfaceRoot.name = "root";
         this.interfaceRoot.addToContainer(this.stage);
+        InputManager_1.default.instance.init("#viewDiv");
         this.debugGraphics = new PIXI.Graphics();
         this.stage.addChild(this.debugGraphics);
         this.connect();
@@ -143,7 +140,7 @@ var Game = (function () {
         loadingText.id = "loadingText";
         this.interfaceRoot.addChild(loadingText);
         loadingText.attachToParent(AttachInfo_1.default.Center);
-        this.connection = new Connection_1.default("localhost", 9002);
+        this.connection = new Connection_1.default("localhost", 9191);
         this.connection.onConnect = function () { return _this.onConnect(); };
         this.connection.onMessage = function (msg) { return _this.onConnectionMessage(msg); };
         this.connection.onError = function (e) { return _this.onConnectionError(e); };
@@ -152,13 +149,14 @@ var Game = (function () {
     };
     Game.prototype.onConnect = function () {
         this.loadTextures();
-        this.connection.send("Hello!");
     };
     Game.prototype.onConnectionMessage = function (msg) {
     };
     Game.prototype.onConnectionError = function (e) {
+        alert("Connection error! Is the server down?");
     };
     Game.prototype.onDisconnect = function () {
+        alert("Disconnected from server!");
     };
     Game.prototype.loadTextures = function () {
         var _this = this;
@@ -170,7 +168,6 @@ var Game = (function () {
     Game.prototype.onTexturesLoaded = function () {
         this.sendGraphicsToWorker();
         this.loadSounds();
-        this.textureWorker.getTexture('parts/helmet', { from: [0x555555], to: [0xff0000] }, this.onTextureWorkerGetTexture);
     };
     Game.prototype.sendGraphicsToWorker = function () {
         var data = this.textureLoader.getData();
@@ -198,6 +195,10 @@ var Game = (function () {
     Game.prototype.initMainMenu = function () {
         var loadingText = this.interfaceRoot.getElementById("loadingText");
         this.interfaceRoot.removeChild(loadingText);
+        var mainMenu = new MainMenu_1.default();
+        this.interfaceRoot.addChild(mainMenu);
+        mainMenu.attachToParent(AttachInfo_1.default.Center);
+        mainMenu.showMenu("login");
     };
     Game.instance = null;
     Game.useDebugGraphics = true;
@@ -206,7 +207,7 @@ var Game = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
 
-},{"./Connection":1,"./interface/AttachInfo":3,"./interface/InterfaceElement":4,"./interface/TextElement":5,"./sound/SoundAssets":7,"./sound/SoundManager":8,"./textures/TextureLoader":9,"./textures/TextureWorker":10,"./util/Log":12}],3:[function(require,module,exports){
+},{"./Connection":1,"./interface/AttachInfo":3,"./interface/InputManager":4,"./interface/InterfaceElement":5,"./interface/TextElement":6,"./interface/prefabs/MainMenu":7,"./sound/SoundAssets":9,"./sound/SoundManager":10,"./textures/TextureLoader":11,"./textures/TextureWorker":12,"./util/Log":14}],3:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
 var AttachInfo = (function () {
@@ -232,9 +233,170 @@ var AttachInfo = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AttachInfo;
 
-},{"../../common/Vector2D":13}],4:[function(require,module,exports){
+},{"../../common/Vector2D":15}],4:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
+var Game_1 = require('../Game');
+var InputManager = (function () {
+    function InputManager() {
+        var _this = this;
+        this.dragThreshold = 8;
+        this._initialized = false;
+        this._mouseCoords = new Vector2D_1.default(0, 0);
+        this._leftMouseDownCoords = null;
+        this._leftMouseDownElement = null;
+        this._hoverElement = null;
+        this._focusElement = null;
+        this._onMouseDown = function (e) {
+            var coords = _this.getMouseCoords(e, true);
+            var element = Game_1.default.instance.interfaceRoot.getElementAtPoint(coords);
+            switch (e.which) {
+                case 1:
+                    _this._leftMouseDownCoords = coords;
+                    _this._leftMouseDownElement = element;
+                    if (element) {
+                        _this.focus(element);
+                        if (element.onMouseDown)
+                            element.onMouseDown(coords);
+                    }
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                default:
+                    console.warn("InputManager: mouse input with which=" + e.which + "?");
+            }
+        };
+        this._onMouseUp = function (e) {
+            var coords = _this.getMouseCoords(e, true);
+            var element = Game_1.default.instance.interfaceRoot.getElementAtPoint(coords);
+            switch (e.which) {
+                case 1:
+                    if (element) {
+                        if (element.onMouseUp)
+                            element.onMouseUp(coords);
+                        if (element.onClick && element == _this._leftMouseDownElement)
+                            element.onClick(coords);
+                    }
+                    _this._leftMouseDownCoords = null;
+                    _this._leftMouseDownElement = null;
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                default:
+                    console.warn("InputManager: mouse input with which=" + e.which + "?");
+            }
+        };
+        this._onMouseMove = function (e) {
+            var coords = _this.getMouseCoords(e, true);
+            var element = Game_1.default.instance.interfaceRoot.getElementAtPoint(coords);
+            if (_this.leftMouseDown && coords.distanceTo(_this._leftMouseDownCoords) > _this.dragThreshold)
+                _this.beginDrag();
+            if (_this._hoverElement && _this._hoverElement != element && _this._hoverElement.onHoverEnd) {
+                _this._hoverElement.onHoverEnd(coords);
+            }
+            _this._hoverElement = element;
+        };
+        this._onMouseScroll = function (e) {
+        };
+        this._onMouseLeave = function (e) {
+            _this._leftMouseDownCoords = null;
+            _this._leftMouseDownElement = null;
+        };
+        this._onKeyDown = function (e) {
+            if (_this._focusElement && _this._focusElement.onKeyDown) {
+                _this._focusElement.onKeyDown(String.fromCharCode(e.which));
+            }
+        };
+        this._onKeyUp = function (e) {
+            if (_this._focusElement && _this._focusElement.onKeyUp) {
+                _this._focusElement.onKeyUp(String.fromCharCode(e.which));
+            }
+        };
+        this._onKeyPress = function (e) {
+            if (_this._focusElement && _this._focusElement.onKeyPress) {
+                _this._focusElement.onKeyPress(String.fromCharCode(e.which));
+            }
+        };
+        if (InputManager._instance) {
+            console.error("InputManager: hey, this is a singleton!");
+        }
+    }
+    Object.defineProperty(InputManager, "instance", {
+        get: function () {
+            if (InputManager._instance)
+                return InputManager._instance;
+            InputManager._instance = new InputManager();
+            return InputManager._instance;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(InputManager.prototype, "leftMouseDown", {
+        get: function () { return this._leftMouseDownCoords != null; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(InputManager.prototype, "focusedElement", {
+        get: function () { return this._focusElement; },
+        enumerable: true,
+        configurable: true
+    });
+    InputManager.prototype.init = function (selector) {
+        if (this._initialized)
+            return;
+        this._initialized = true;
+        this._div = $(selector);
+        if (!this._div) {
+            console.error("InputManager: no element found!");
+        }
+        this._div.mousedown(this._onMouseDown);
+        this._div.mouseup(this._onMouseUp);
+        this._div.mousemove(this._onMouseMove);
+        this._div.scroll(this._onMouseScroll);
+        this._div.mouseleave(this._onMouseLeave);
+        this._div.keydown(this._onKeyDown);
+        this._div.contextmenu(function (e) {
+            e.stopPropagation();
+            return false;
+        });
+    };
+    InputManager.prototype.focus = function (element) {
+        if (element != this._focusElement) {
+            if (this._focusElement && this._focusElement.onUnfocus) {
+                this._focusElement.onUnfocus();
+            }
+            if (element) {
+                this._focusElement = element;
+                if (element.onFocus) {
+                    element.onFocus();
+                }
+            }
+        }
+    };
+    InputManager.prototype.beginDrag = function () {
+    };
+    InputManager.prototype.getMouseCoords = function (e, set) {
+        if (set === void 0) { set = false; }
+        var offset = this._div.offset();
+        var coords = new Vector2D_1.default(e.pageX - offset.left, e.pageY - offset.top);
+        if (set)
+            this._mouseCoords = coords;
+        return coords;
+    };
+    InputManager._instance = null;
+    return InputManager;
+}());
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = InputManager;
+
+},{"../../common/Vector2D":15,"../Game":2}],5:[function(require,module,exports){
+"use strict";
+var Vector2D_1 = require('../../common/Vector2D');
+var InputManager_1 = require('./InputManager');
 var Game_1 = require('../Game');
 var InterfaceElement = (function () {
     function InterfaceElement() {
@@ -242,14 +404,9 @@ var InterfaceElement = (function () {
         this.name = "";
         this.clickable = false;
         this.draggable = false;
+        this.useOwnBounds = true;
         this.dragElement = null;
         this.maskSprite = null;
-        this.onMouseDown = null;
-        this.onMouseUp = null;
-        this.onClick = null;
-        this.onHoverStart = null;
-        this.onHoverEnd = null;
-        this.onChange = null;
         this._displayObject = new PIXI.Container();
         this._parent = null;
         this._children = [];
@@ -315,10 +472,31 @@ var InterfaceElement = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(InterfaceElement.prototype, "isRoot", {
+        get: function () { return this._parent == null && this._displayObject.parent != null; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(InterfaceElement.prototype, "isFocused", {
+        get: function () { return InputManager_1.default.instance.focusedElement == this; },
+        enumerable: true,
+        configurable: true
+    });
     InterfaceElement.prototype.getElementAtPoint = function (point) {
         var element = null;
-        var bounds = this._displayObject.getBounds();
-        if (bounds.contains(point.x, point.y)) {
+        var checkChildren = this.isRoot;
+        if (!checkChildren) {
+            var bounds;
+            if (this.useOwnBounds) {
+                var pos = this.getGlobalPosition();
+                bounds = new PIXI.Rectangle(pos.x, pos.y, this._width, this._height);
+            }
+            else {
+                bounds = this._displayObject.getBounds();
+            }
+            checkChildren = bounds.contains(point.x, point.y);
+        }
+        if (checkChildren) {
             for (var i = this._children.length - 1; i >= 0; i--) {
                 element = this._children[i].getElementAtPoint(point);
                 if (element != null) {
@@ -335,6 +513,21 @@ var InterfaceElement = (function () {
         if (maxChecks === void 0) { maxChecks = 1000; }
         if (this.id == id)
             return this;
+        return this.getElementByFunction(function (e) {
+            return e.id == id;
+        });
+    };
+    InterfaceElement.prototype.getElement = function (e) {
+        if (this == e)
+            return this;
+        return this.getElementByFunction(function (e2) {
+            return e2 == e;
+        });
+    };
+    InterfaceElement.prototype.getElementByFunction = function (func, maxChecks) {
+        if (maxChecks === void 0) { maxChecks = 500; }
+        if (func(this))
+            return this;
         var toCheck = [this];
         var element;
         var child;
@@ -345,13 +538,13 @@ var InterfaceElement = (function () {
             len = element._children.length;
             for (i = 0; i < len; i++) {
                 child = element._children[i];
-                if (child.id == id)
+                if (func(child))
                     return child;
                 toCheck.push(child);
             }
             maxChecks -= 1;
         }
-        if (maxChecks <= 900)
+        if (maxChecks <= 400)
             console.warn("Wasting cycles on InterfaceElement.getElementById");
         else if (maxChecks == 0)
             console.warn("Wasting LOTS of cycles on InterfaceElement.getElementById");
@@ -427,8 +620,8 @@ var InterfaceElement = (function () {
         this._resize = null;
     };
     InterfaceElement.prototype.positionRelativeTo = function (other, info) {
-        this._position.x = other._position.x + (other._width * info.to.x) - (this.width * info.from.x) + info.offset.x;
-        this._position.y = other._position.y + (other._height * info.to.y) - (this.height * info.from.y) + info.offset.y;
+        this._position.x = (other._width * info.to.x) - (this.width * info.from.x) + info.offset.x;
+        this._position.y = (other._height * info.to.y) - (this.height * info.from.y) + info.offset.y;
         if (other != this._parent && other._parent != this._parent) {
             var thisGlobal = this.getGlobalPosition();
             var otherGlobal = other.getGlobalPosition();
@@ -465,7 +658,6 @@ var InterfaceElement = (function () {
             if (this._resize.fill.y > 0)
                 height = this._parent._height * this._resize.fill.y - this._resize.padding.y * 2;
             this.resize(width, height);
-            this.onResize();
         }
         else if (this._attach) {
             this.positionRelativeTo(this._parent, this._attach);
@@ -484,7 +676,7 @@ var InterfaceElement = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceElement;
 
-},{"../../common/Vector2D":13,"../Game":2}],5:[function(require,module,exports){
+},{"../../common/Vector2D":15,"../Game":2,"./InputManager":4}],6:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -498,6 +690,7 @@ var TextElement = (function (_super) {
         if (text === void 0) { text = ""; }
         if (style === void 0) { style = TextElement.basicText; }
         _super.call(this);
+        this._debugColor = 0xff0000;
         this._className = "TextElement";
         this._pixiText = new PIXI.Text(text, style);
         this._displayObject.addChild(this._pixiText);
@@ -535,14 +728,60 @@ var TextElement = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextElement;
 
-},{"./InterfaceElement":4}],6:[function(require,module,exports){
+},{"./InterfaceElement":5}],7:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var InterfaceElement_1 = require('../InterfaceElement');
+var TextElement_1 = require('../TextElement');
+var AttachInfo_1 = require('../AttachInfo');
+var Log = require('../../util/Log');
+var MainMenu = (function (_super) {
+    __extends(MainMenu, _super);
+    function MainMenu() {
+        _super.call(this);
+        this._currentMenuName = "";
+        this._currentMenu = null;
+        this._className = "MainMenu";
+        this._loginMenu = new TextElement_1.default("Login!", TextElement_1.default.veryBigText);
+    }
+    MainMenu.prototype.showMenu = function (name) {
+        if (name == this._currentMenuName) {
+            Log.log('debug', 'MainMenu already on "' + name + '"');
+            return;
+        }
+        if (this._currentMenu)
+            this.removeChild(this._currentMenu);
+        switch (name) {
+            case "login":
+                this.showLogin();
+                break;
+        }
+    };
+    MainMenu.prototype.showLogin = function () {
+        Log.log('debug', 'MainMenu: login');
+        this._currentMenuName = "login";
+        this._currentMenu = this._loginMenu;
+        this.addChild(this._loginMenu);
+        this._loginMenu.attachToParent(AttachInfo_1.default.Center);
+        console.log(this);
+    };
+    return MainMenu;
+}(InterfaceElement_1.default));
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = MainMenu;
+
+},{"../../util/Log":14,"../AttachInfo":3,"../InterfaceElement":5,"../TextElement":6}],8:[function(require,module,exports){
 "use strict";
 var Game_1 = require('./Game');
 var viewDiv = document.getElementById("viewDiv");
 var game = new Game_1.default(viewDiv);
 game.init();
 
-},{"./Game":2}],7:[function(require,module,exports){
+},{"./Game":2}],9:[function(require,module,exports){
 "use strict";
 exports.mainMenuMusic = [
     ["music/fortress", "sound/music/fortress.ogg"]
@@ -553,7 +792,7 @@ exports.interfaceSounds = [
     ["ui/nope", "sound/ui/nope.ogg"]
 ];
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 var SoundLoadRequest = (function () {
     function SoundLoadRequest(name, list, onComplete, onProgress) {
@@ -645,7 +884,7 @@ var SoundManager = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = SoundManager;
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 var TextureLoader = (function () {
     function TextureLoader(sheetName, mapName, callback) {
@@ -705,7 +944,7 @@ var TextureLoader = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureLoader;
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 "use strict";
 var ColorUtil = require('../util/ColorUtil');
 var TextureWorker = (function () {
@@ -833,7 +1072,7 @@ var TextureWorker = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureWorker;
 
-},{"../util/ColorUtil":11}],11:[function(require,module,exports){
+},{"../util/ColorUtil":13}],13:[function(require,module,exports){
 "use strict";
 function rgbToNumber(r, g, b) {
     return (r << 16) + (g << 8) + b;
@@ -855,7 +1094,7 @@ function rgbaString(r, g, b, a) {
 }
 exports.rgbaString = rgbaString;
 
-},{}],12:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 "use strict";
 var types = {};
 var LogType = (function () {
@@ -887,7 +1126,7 @@ function log(typeName, msg) {
 }
 exports.log = log;
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 var Vector2D = (function () {
     function Vector2D(x, y) {
@@ -974,4 +1213,4 @@ var Vector2D = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Vector2D;
 
-},{}]},{},[6]);
+},{}]},{},[8]);

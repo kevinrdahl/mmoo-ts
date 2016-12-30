@@ -1,32 +1,28 @@
 import UserOptions from './UserOptions';
 
+/**
+ * Handles the user as they exist in the database. Boring clerical stuff ONLY!
+ * Save the cool things for Player
+ */
 export default class User {
-	protected _name:string;
-	protected _pass:string = null;
-	protected _options:UserOptions;
+	public id:number;
+	public name:string;
+	public password:string = null;
+	public options:UserOptions;
 
-	get options():UserOptions { return this._options; }
+	public get pass():string { return this.password; }
 
-	constructor(name:string, pass:string, options:UserOptions) {
-		this._name = name;
-		this._pass = pass;
-		this._options = options;
+	constructor(data:Object = null) {
+		if (data != null) {
+			this.readData(data);
+		}
 	}
 
-	public static fromDoc (doc:any):User {
-		return new User(doc.name, doc.pass, doc.options);
-	}
+	public readData(data:Object) {
+		if (data.hasOwnProperty('user_id')) this.id = data['user_id'];
+		if (data.hasOwnProperty('name')) this.name = data['name'];
+		if (data.hasOwnProperty('password')) this.name = data['password'];
 
-	public static createNew (name:string, pass:string):User {
-		return new User(name, pass, UserOptions.createDefault());
-	}
-
-	public toDoc() {
-		var doc = {
-			name:this._name,
-			pass:this._pass,
-			options:this._options.toDoc()
-		};
-		return doc;
+		this.options = UserOptions.createDefault();
 	}
 }

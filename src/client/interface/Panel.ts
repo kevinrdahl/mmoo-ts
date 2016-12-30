@@ -7,6 +7,8 @@ export default class Panel extends InterfaceElement {
 	public static BASIC:number = 0;
 	public static BASICBAR:number = 1;
 
+	protected _debugColor = 0x00ff00;
+
 	private _style:number;
 	private _texture:PIXI.RenderTexture;
 	private _sprite:PIXI.Sprite;

@@ -13,6 +13,7 @@ export const USER = 10; //login, create account, character operations
 export const CRYPTO = 11; //wraps some other message
 export const GET_REQUEST = 12; //general-purpose info retrieval (eg rsa key)
 export const GET_RESPONSE = 13;
+export const GAME_STATUS = 14;
 
 /**
  * Giving everything its own class makes things neat and happy. Probably.
@@ -134,5 +135,32 @@ export class GetResponse extends Message {
 		var s = super.serialize();
 		s += JSON.stringify([this.subject, this.response]);
 		return s;
+	}
+}
+
+/**
+ * Reports a Game's current frame and simulation speed
+ */
+export class GameStatus extends Message {
+	public gameId:number;
+	public frame:number;
+	public frameInterval:number;
+
+	constructor(gameId:number, frame:number, frameInterval:number) {
+		super(GAME_STATUS);
+		this.gameId = gameId;
+		this.frame = frame;
+		this.frameInterval = frameInterval;
+	}
+
+	public static fromArgs(args:Array<any>):GameStatus {
+		if (
+			Util.isInt(args[0])
+			&& Util.isInt(args[1])
+			&& Util.isNumber(args[2])
+			) {
+			return new GameStatus(args[0], args[1], args[2]);
+		}
+		return null;
 	}
 }

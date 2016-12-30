@@ -6,11 +6,15 @@
 /// <reference path='../../declarations/ws.d.ts' />
 
 import * as WebSocket from 'ws';
+
 import BaseServer from './BaseServer';
 import User from './user/User';
+import Player from './game/Player';
 import ClientDAO from './dao/ClientDAO';
+import DAOOperation from './dao/DAOOperation';
 import Message from '../common/messages/Message';
 import * as MessageTypes from '../common/messages/MessageTypes';
+import * as Util from '../common/Util';
 
 /**
  * Specifically handles WebSocket messages. Once the message's
@@ -19,6 +23,9 @@ import * as MessageTypes from '../common/messages/MessageTypes';
  * separate, but connected, entities.
  */
 export default class WebSocketClient {
+	public player:Player = null;
+
+	//handlers
 	public onMessage:(client:WebSocketClient, msg:string) => void;
 	public onDisconnect:(client:WebSocketClient) => void;
 
@@ -42,7 +49,7 @@ export default class WebSocketClient {
 		socket.on("message", this._onMessage);
 
 		this._server = server;
-		this._dao = new ClientDAO(server.db);
+		this._dao = new ClientDAO(server.mongo);
 	}
 
 	public send(msg:string) {
@@ -53,17 +60,21 @@ export default class WebSocketClient {
 		}
 	}
 
+	public sendMessage(msg:Message) {
+		this.send(msg.serialize());
+	}
+
 	protected _onMessage = (data:string) => {
 		var message:Message = Message.parse(data);
 
 		if (message) {
 			switch(message.type) {
 				case MessageTypes.PING:
-					console.log(this._id + ": Ping");
+					this.send(MessageTypes.Ping.fromArgs(null).serialize()); //note: the Ping message class returns a singleton in its fromArgs function
 					break;
 
 				case MessageTypes.USER:
-					console.log(this._id + ": User");
+					this.onUserMessage(message as MessageTypes.UserMessage);
 					break;
 
 				case MessageTypes.CRYPTO:
@@ -71,8 +82,10 @@ export default class WebSocketClient {
 					break;
 
 				default:
-					console.log("Unkown message type " + message.type);
+					console.log("Unknown message type " + message.type);
 			}
+		} else {
+			console.log("ERROR: can't parse message \"" + data + "\"");
 		}
 
 		this.onMessage(this, data);
@@ -81,4 +94,65 @@ export default class WebSocketClient {
 	protected _onDisconnect = () => {
 		this.onDisconnect(this);
 	};
+
+	protected onUserMessage(msg:MessageTypes.UserMessage) {
+		if (!this._server.isDAOOperationAllowed(msg.action)) {
+			console.log("Client " + this._id + ": User Action not allowed: " + msg.action);
+			return;
+		}
+
+		var params = msg.params;
+
+		switch (msg.action) {
+			case "login":
+				if (Util.isString(params['name']) && Util.isString(params['pass'])) {
+					var name:string = params['name'];
+					var pass:string = params['pass']; //HASH IT DUMMY
+					this._dao.login(name, pass, this.onTryLogin);
+				}
+				break;
+
+			case "createUser":
+				//for now this looks identical, but TIMES CHANGE
+				if (Util.isString(params['name']) && Util.isString(params['pass'])) {
+					var name:string = params['name'];
+					var pass:string = params['pass']; //DAO does the hash
+					this._dao.createUser(name, pass, this.onTryCreateUser);
+				}
+				break;
+
+			default:
+				console.log("Unhandled but allowed User Action: " + msg.action);
+		}
+	}
+
+	protected onTryLogin = (operation:DAOOperation) => {
+		var params = {success:operation.success};
+
+		if (operation.success) {
+			this._user = new User(operation.result);
+			this._server.onClientLogin(this);
+
+			params["name"] = this._user.name;
+			params["options"] = operation.result.options;
+		} else {
+			params["failReason"] = operation.failReason;
+		}
+
+		var msg:Message = new MessageTypes.UserMessage(operation.type, params);
+		this.sendMessage(msg);
+	}
+
+	protected onTryCreateUser = (operation:DAOOperation) => {
+		var params = {success:operation.success};
+
+		if (operation.success) {
+			params["name"] = operation.data.name;
+		} else {
+			params["failReason"] = operation.failReason;
+		}
+
+		var msg:Message = new MessageTypes.UserMessage(operation.type, params);
+		this.sendMessage(msg);
+	}
 }

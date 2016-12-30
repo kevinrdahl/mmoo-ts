@@ -3,25 +3,25 @@ export default class Vector2D {
 		public x:number,
 		public y:number
 	) {}
-	
+
 	public set(v:Vector2D):Vector2D {
 		this.x = v.x;
 		this.y = v.y;
 		return this;
 	}
-	
+
 	public add(v:Vector2D):Vector2D {
 		this.x += v.x;
 		this.y += v.y;
 		return this;
 	}
-	
+
 	public sub(v:Vector2D):Vector2D {
 		this.x -= v.x;
 		this.y -= v.y;
 		return this;
 	}
-	
+
 	public round():Vector2D {
 		this.x = Math.round(this.x);
 		this.y = Math.round(this.y);
@@ -71,7 +71,7 @@ export default class Vector2D {
 		return (this.x == other.x && this.y == other.y);
 	}
 
-	public distanceTo(other:Vector2D):boolean {
+	public distanceTo(other:Vector2D):number {
 		//avoid creating and discarding
 		var ret;
 		other.sub(this);
@@ -86,7 +86,7 @@ export default class Vector2D {
 		var squareDist = xDiff * xDiff + yDiff * yDiff;
 		return (squareDist <= distance * distance);
 	}
-	
+
 	public toJSON() {
 		return [this.x, this.y];
 	}

@@ -15,6 +15,8 @@ import Panel from './interface/Panel';
 import TextElement from './interface/TextElement';
 import ElementList from './interface/ElementList';
 import AttachInfo from './interface/AttachInfo';
+import MainMenu from './interface/prefabs/MainMenu';
+import InputManager from './interface/InputManager';
 
 export default class Game {
 	public static instance: Game = null;
@@ -23,6 +25,7 @@ export default class Game {
 	/*=== PUBLIC ===*/
 	public stage: PIXI.Container = null;
 	public renderer: PIXI.WebGLRenderer | PIXI.CanvasRenderer = null;
+	public viewDiv:HTMLElement = null;
 	public viewWidth: number = 500;
 	public viewHeight: number = 500;
 	public interfaceRoot: InterfaceElement;
@@ -34,12 +37,12 @@ export default class Game {
 	get volatileGraphics(): PIXI.Graphics { this._volatileGraphics.clear(); return this._volatileGraphics }
 
 	/*=== PRIVATE ===*/
-	private _volatileGraphics = new PIXI.Graphics();
+	private _volatileGraphics = new PIXI.Graphics(); //to be used when drawing to a RenderTexture
 	private _documentResized: boolean = true;
 
-	constructor(
-		public viewDiv: HTMLElement
-	) { } //funky!
+	constructor(viewDiv: HTMLElement) {
+		this.viewDiv = viewDiv;
+	}
 
 	public init() {
 		Log.setLogType("debug", new Log.LogType("", "#999"));
@@ -70,6 +73,9 @@ export default class Game {
 		this.interfaceRoot.id = "root";
 		this.interfaceRoot.name = "root";
 		this.interfaceRoot.addToContainer(this.stage);
+
+		//Set up InputManager
+		InputManager.instance.init("#viewDiv");
 
 		//Debug graphics
 		this.debugGraphics = new PIXI.Graphics();
@@ -111,7 +117,7 @@ export default class Game {
 		this.interfaceRoot.addChild(loadingText);
 		loadingText.attachToParent(AttachInfo.Center);
 
-		this.connection = new Connection("localhost", 9002);
+		this.connection = new Connection("localhost", 9191);
 		this.connection.onConnect = ()=>this.onConnect();
 		this.connection.onMessage = (msg:string)=>this.onConnectionMessage(msg);
 		this.connection.onError = (e:Event)=>this.onConnectionError(e);
@@ -122,7 +128,6 @@ export default class Game {
 
 	private onConnect() {
 		this.loadTextures();
-		this.connection.send("Hello!");
 	}
 
 	private onConnectionMessage(msg:string) {
@@ -130,20 +135,20 @@ export default class Game {
 	}
 
 	private onConnectionError(e:Event) {
-
+		alert("Connection error! Is the server down?");
 	}
 
 	private onDisconnect() {
-
+		alert("Disconnected from server!");
 	}
 
 	private onTextureWorkerGetTexture = (requestKey:string, texture:PIXI.Texture) => {
-		var sprite:PIXI.Sprite = new PIXI.Sprite(texture);
+		/*var sprite:PIXI.Sprite = new PIXI.Sprite(texture);
 		sprite.scale.x = 5;
 		sprite.scale.y = 5;
 		sprite.position.x = 100;
 		sprite.position.y = 100;
-		this.stage.addChild(sprite);
+		this.stage.addChild(sprite);*/
 	};
 
 	private loadTextures() {
@@ -159,7 +164,7 @@ export default class Game {
 		this.sendGraphicsToWorker();
 		this.loadSounds();
 
-		this.textureWorker.getTexture('parts/helmet', {from:[0x555555], to:[0xff0000]}, this.onTextureWorkerGetTexture);
+		//this.textureWorker.getTexture('parts/helmet', {from:[0x555555], to:[0xff0000]}, this.onTextureWorkerGetTexture);
 	}
 
 	private sendGraphicsToWorker() {
@@ -192,5 +197,10 @@ export default class Game {
 	private initMainMenu() {
 		var loadingText: TextElement = this.interfaceRoot.getElementById("loadingText") as TextElement;
 		this.interfaceRoot.removeChild(loadingText);
+
+		var mainMenu:MainMenu = new MainMenu();
+		this.interfaceRoot.addChild(mainMenu);
+		mainMenu.attachToParent(AttachInfo.Center);
+		mainMenu.showMenu("login");
 	}
 }

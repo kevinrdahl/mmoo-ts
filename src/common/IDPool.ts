@@ -1,5 +1,9 @@
+/**
+ * Generates string IDs from an alphabet. IDs can be relinquished and recycled to keep them short.
+ */
 export default class IDPool {
 	private static _defaultAlphabet:string = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~`!@#$%^&*()-_=+[]{}|;:<>,.?/';
+	private static _alphanumeric:string = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 	private _indeces:Array<number> = [0];
 	private _unused:Array<string> = [];
