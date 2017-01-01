@@ -22,11 +22,13 @@ export default class Message {
 	public static parse(s:string):Message {
 		var splitIndex = s.indexOf('[');
 		if (splitIndex === -1) {
+			console.log("parse: nowhere to split");
 			return null;
 		}
 
 		var msgType = parseInt(s.substring(0, splitIndex), 10);
 		if (isNaN(msgType)) {
+			console.log("parse: " + s.substring(0, splitIndex) + " is NaN");
 			return null;
 		}
 
@@ -34,17 +36,21 @@ export default class Message {
 		try {
 			args = JSON.parse(s.substring(splitIndex));
 		} catch (e) {
+			console.log("parse: invalid json");
 			return null;
 		}
 		if (!Util.isArray(args)) return null;
 
 		var msgClass = MessageTypes.getClassByType(msgType);
-		if (!msgClass) {
+		if (msgClass === null) {
+			console.log("parse: no class for type " + msgType);
 			return null;
 		}
 
 		var msg = msgClass.fromArgs(args);
 		if (msg) return msg;
+
+		console.log("parse: class evaluator rejected arguments");
 		return null;
 
 		//decrypt, if applicable

@@ -1,7 +1,13 @@
 /// <reference path="../../../declarations/pixi.js.d.ts"/>
-//import ColorUtil = require('../util/ColorUtil');
 import * as ColorUtil from '../util/ColorUtil';
 
+/**
+ * Wraps a Worker, and provides async functions for getting recolored sprites.
+ * TODO: create sprite sheets, as per previous implementation
+ *
+ * NOTE: Most of the actual work is done in public/js/mmoo-worker.js, and due to
+ * some funky TypeScript nonsense it must be written there.
+ */
 export default class TextureWorker {
 	private static _supportsImageDataConstructor = -1;
 

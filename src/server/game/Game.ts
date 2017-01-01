@@ -89,7 +89,15 @@ export default class Game {
 		}
 	}
 
+	public userCanJoin(user:User):boolean {
+		return true;
+	}
+
 	public addClientAsPlayer(client:WebSocketClient) {
+		if (!client.user) {
+			console.log(this.name + ": client " + client.id + " has no user. Not adding as a player.");
+		}
+
 		var player:Player = new Player();
 		player.client = client;
 		client.player = player;
@@ -102,6 +110,7 @@ export default class Game {
 	public removeClient(client:WebSocketClient) {
 		if (client.player) {
 			this.removePlayer(client.player);
+			client.player = null;
 		}
 	}
 

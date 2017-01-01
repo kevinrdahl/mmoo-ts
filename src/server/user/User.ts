@@ -21,7 +21,7 @@ export default class User {
 	public readData(data:Object) {
 		if (data.hasOwnProperty('user_id')) this.id = data['user_id'];
 		if (data.hasOwnProperty('name')) this.name = data['name'];
-		if (data.hasOwnProperty('password')) this.name = data['password'];
+		if (data.hasOwnProperty('password')) this.password = data['password'];
 
 		this.options = UserOptions.createDefault();
 	}

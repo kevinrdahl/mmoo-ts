@@ -4,6 +4,7 @@
 //import Log = require('./util/Log');
 import * as Log from './util/Log';
 import Connection from './Connection';
+import LoginManager from './LoginManager';
 import TextureLoader from './textures/TextureLoader';
 import TextureWorker from './textures/TextureWorker';
 import SoundManager from './sound/SoundManager';
@@ -17,6 +18,9 @@ import ElementList from './interface/ElementList';
 import AttachInfo from './interface/AttachInfo';
 import MainMenu from './interface/prefabs/MainMenu';
 import InputManager from './interface/InputManager';
+
+import * as MessageTypes from '../common/messages/MessageTypes';
+import Message from '../common/messages/Message';
 
 export default class Game {
 	public static instance: Game = null;
@@ -33,6 +37,7 @@ export default class Game {
 	public debugGraphics: PIXI.Graphics;
 	public connection: Connection;
 	public textureWorker: TextureWorker;
+	public loginManager:LoginManager = new LoginManager();
 
 	get volatileGraphics(): PIXI.Graphics { this._volatileGraphics.clear(); return this._volatileGraphics }
 
@@ -119,7 +124,7 @@ export default class Game {
 
 		this.connection = new Connection("localhost", 9191);
 		this.connection.onConnect = ()=>this.onConnect();
-		this.connection.onMessage = (msg:string)=>this.onConnectionMessage(msg);
+		this.connection.onMessage = (msg:Message)=>this.onConnectionMessage(msg);
 		this.connection.onError = (e:Event)=>this.onConnectionError(e);
 		this.connection.onDisconnect = ()=>this.onDisconnect();
 
@@ -130,8 +135,12 @@ export default class Game {
 		this.loadTextures();
 	}
 
-	private onConnectionMessage(msg:string) {
-
+	private onConnectionMessage(message:Message) {
+		if (message.type == MessageTypes.USER) {
+			this.loginManager.onUserMessage(message as MessageTypes.UserMessage);
+		} else {
+			console.log("Received unhandled message from server:" + message.serialize());
+		}
 	}
 
 	private onConnectionError(e:Event) {
@@ -182,7 +191,7 @@ export default class Game {
 
 	private onSoundsLoaded(which: string) {
 		if (which == "initial") {
-			SoundManager.instance.playMusic("music/fortress");
+			//SoundManager.instance.playMusic("music/fortress");
 			this.initMainMenu();
 		}
 	}
@@ -202,5 +211,7 @@ export default class Game {
 		this.interfaceRoot.addChild(mainMenu);
 		mainMenu.attachToParent(AttachInfo.Center);
 		mainMenu.showMenu("login");
+
+		this.loginManager.login("testy", "abc123");
 	}
 }

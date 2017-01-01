@@ -287,12 +287,14 @@ export default class InterfaceElement {
 		}
 	}
 
-	private onResize() {
+	protected onResize(notifyChildren:boolean = true) {
 		if (this._attach) this.positionRelativeTo(this._parent, this._attach);
 
-		var len = this._children.length;
-		for (var i = 0; i < len; i++) {
-			this._children[i].onParentResize();
+		if (notifyChildren) {
+			var len = this._children.length;
+			for (var i = 0; i < len; i++) {
+				this._children[i].onParentResize();
+			}
 		}
 	}
 }

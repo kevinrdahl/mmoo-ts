@@ -36,6 +36,7 @@ export default class BaseServer {
 	get mongoUser():string { return this._settings.mongo.user; }
 	get name():string { return this._settings.server.name; }
 	get mongo():mongodb.Db { return this._mongo; }
+	get mySQLPool():any { return this._mysqlPool; }
 
 	constructor (settingsPath:string) {
 		this._settingsPath = settingsPath;
@@ -123,6 +124,8 @@ export default class BaseServer {
 		client.onDisconnect = this.onClientDisconnect;
 
 		this._wsClients[client.id] = client;
+
+		console.log("Client " + client.id + " connected.");
 	}
 
 	protected onClientMessage = (client:WebSocketClient, msg:string) => {
@@ -131,13 +134,15 @@ export default class BaseServer {
 
 	protected onClientDisconnect = (client:WebSocketClient) => {
 		delete this._wsClients[client.id];
+
+		console.log("Client " + client.id + " disconnected.");
 	}
 
 	/**
 	 * When a WebSocketClient obatins a User, it calls this
 	 */
 	public onClientLogin(client:WebSocketClient) {
-		console.log("Client " + client.id + " logged in as User " + client.user.id + "(" + client.user.name + ")");
+		console.log("Client " + client.id + " logged in as User " + client.user.id + " (" + client.user.name + ")");
 	}
 
 	////////////////////////////////////////

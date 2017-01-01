@@ -8,6 +8,8 @@
 import * as WebSocket from 'ws';
 
 import BaseServer from './BaseServer';
+import GameServer from './GameServer';
+import Game from './game/Game';
 import User from './user/User';
 import Player from './game/Player';
 import ClientDAO from './dao/ClientDAO';
@@ -49,7 +51,7 @@ export default class WebSocketClient {
 		socket.on("message", this._onMessage);
 
 		this._server = server;
-		this._dao = new ClientDAO(server.mongo);
+		this._dao = new ClientDAO(server.mySQLPool);
 	}
 
 	public send(msg:string) {
@@ -77,6 +79,10 @@ export default class WebSocketClient {
 					this.onUserMessage(message as MessageTypes.UserMessage);
 					break;
 
+				case MessageTypes.GET_REQUEST:
+					this.onGetRequest(message as MessageTypes.GetRequest);
+					break;
+
 				case MessageTypes.CRYPTO:
 					console.log(this._id + ": Secure");
 					break;
@@ -101,11 +107,13 @@ export default class WebSocketClient {
 			return;
 		}
 
+		var handled:boolean = false;
 		var params = msg.params;
 
 		switch (msg.action) {
 			case "login":
 				if (Util.isString(params['name']) && Util.isString(params['pass'])) {
+					handled = true;
 					var name:string = params['name'];
 					var pass:string = params['pass']; //HASH IT DUMMY
 					this._dao.login(name, pass, this.onTryLogin);
@@ -115,26 +123,75 @@ export default class WebSocketClient {
 			case "createUser":
 				//for now this looks identical, but TIMES CHANGE
 				if (Util.isString(params['name']) && Util.isString(params['pass'])) {
+					handled = true;
 					var name:string = params['name'];
 					var pass:string = params['pass']; //DAO does the hash
 					this._dao.createUser(name, pass, this.onTryCreateUser);
 				}
 				break;
 
+			case "joinGame":
+				if (Util.isInt(params['gameId'])) {
+					handled = true;
+					params['success'] = false;
+
+					if (!this._user) {
+						params['failReason'] = "Not logged in.";
+					}
+					else if (this.player) {
+						params['failReason'] = "Already in a game.";
+					}
+					else if (!(this._server instanceof GameServer)) {
+						params['failReason'] = "Not connected to a game server.";
+					}
+					else {
+						var gameServer:GameServer = this._server as GameServer;
+						var game:Game = gameServer.getGameById(params['gameId']);
+						if (!game) {
+							params['failReason'] = "Game does not exist.";
+						} else if (!game.userCanJoin(this._user)) {
+							params['failReason'] = "Don't have permission to join that game."
+						} else {
+							//actually join
+							params['success'] = true;
+							this.sendMessage(msg);
+
+							game.addClientAsPlayer(this);
+						}
+					}
+				}
+
 			default:
 				console.log("Unhandled but allowed User Action: " + msg.action);
+
+			if (!handled) {
+				params['success'] = false;
+				params['failReason'] = "Invalid argument type(s)";
+				this.sendMessage(msg);
+			}
 		}
+	}
+
+	protected onGetRequest(msg:MessageTypes.GetRequest) {
+		var ret:any = false;
+
+		if (msg.subject == "games" && this._server instanceof GameServer) {
+			ret = (this._server as GameServer).getGamesSummary();
+		}
+
+		var response:MessageTypes.GetResponse = new MessageTypes.GetResponse(msg.requestKey, ret);
+		this.sendMessage(response);
 	}
 
 	protected onTryLogin = (operation:DAOOperation) => {
 		var params = {success:operation.success};
 
 		if (operation.success) {
-			this._user = new User(operation.result);
+			this._user = operation.result;
 			this._server.onClientLogin(this);
 
+			params["id"] = this._user.id;
 			params["name"] = this._user.name;
-			params["options"] = operation.result.options;
 		} else {
 			params["failReason"] = operation.failReason;
 		}

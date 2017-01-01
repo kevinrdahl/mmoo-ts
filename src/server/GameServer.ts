@@ -13,6 +13,16 @@ export default class GameServer extends BaseServer {
 		this._allowedDAOOperations['createUser'] = true;
 	}
 
+	public getGameById(id:number):Game {
+		for (var i = 0; i < this._games.length; i++) {
+			if (this._games[i].id == id) {
+				return this._games[i];
+			}
+		}
+
+		return null;
+	}
+
 	protected onHttpRequest = (request:http.IncomingMessage, response:http.ServerResponse) => {
 		//response.end("GameServer: " + request.url);
 		if (request.url === "/getGames") {
@@ -20,7 +30,7 @@ export default class GameServer extends BaseServer {
 		}
 	}
 
-	protected getGamesSummary():Array<Object> {
+	public getGamesSummary():Array<Object> {
 		var list:Array<Object> = [];
 
 		for (var i = 0; i < this._games.length; i++) {

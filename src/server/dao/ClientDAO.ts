@@ -92,7 +92,12 @@ export default class ClientDAO {
 			return;
 		}
 
+		//console.log("Query response:\n   " + JSON.stringify(rows));
+
 		var operation = this._operationQueue.shift();
+
+		//if (operation) console.log("Operation data:\n   " + JSON.stringify(operation.data));
+		//else console.log("No operation!");
 
 		switch (operation.type) {
 			case "checkIfUserExists":
@@ -104,9 +109,9 @@ export default class ClientDAO {
 				if (rows.length == 1) {
 					var entry = rows[0];
 					//if (operation.data.pass == entry.pass) {
-					if (Crypto.checkPassword(operation.data.pass, entry.pass)) {
+					if (Crypto.checkPassword(operation.data.pass, entry.password)) {
 						operation.success = true;
-						operation.result = entry;
+						operation.result = new User(entry);
 					} else {
 						operation.failReason = "Incorrect password.";
 					}

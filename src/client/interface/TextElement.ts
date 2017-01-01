@@ -2,9 +2,9 @@
 import InterfaceElement from './InterfaceElement';
 
 export default class TextElement extends InterfaceElement {
-	public static basicText:PIXI.TextStyle = {font:'14px Open Sans', fill:0xffffff, align:'left'};
-	public static bigText:PIXI.TextStyle = {font:'32px Open Sans', fill:0xffffff, align:'left'};
-	public static veryBigText:PIXI.TextStyle = {font:'48px Open Sans', fill:0xffffff, align:'left'};
+	public static basicText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:14, fontFamily:'Open Sans', fill:0xffffff, align:'left'});
+	public static bigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:32, fontFamily:'Open Sans', fill:0xffffff, align:'left'});
+	public static veryBigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize: 48, fontFamily:'Open Sans', fill:0xffffff, align:'left'});
 
 	protected _debugColor = 0xff0000;
 

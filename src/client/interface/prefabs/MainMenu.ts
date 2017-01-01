@@ -1,6 +1,7 @@
 import InterfaceElement from '../InterfaceElement';
 import TextElement from '../TextElement';
 import AttachInfo from '../AttachInfo';
+import LoginMenu from './LoginMenu';
 import * as Log from '../../util/Log';
 
 export default class MainMenu extends InterfaceElement {
@@ -14,7 +15,8 @@ export default class MainMenu extends InterfaceElement {
 		super();
 
 		this._className = "MainMenu";
-		this._loginMenu = new TextElement("Login!", TextElement.veryBigText);
+		//this._loginMenu = new TextElement("Login!", TextElement.veryBigText);
+		this._loginMenu = new LoginMenu();
 	}
 
 	public showMenu(name:string) {
@@ -38,6 +40,6 @@ export default class MainMenu extends InterfaceElement {
 		this.addChild(this._loginMenu);
 		this._loginMenu.attachToParent(AttachInfo.Center);
 
-		console.log(this);
+
 	}
 }

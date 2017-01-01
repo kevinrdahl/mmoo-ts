@@ -1,14 +1,19 @@
 import * as Util from '../common/Util'; //import Util = require('../common/Util');
 import * as Log from './util/Log'; //import Log = require('./util/Log');
+import Message from '../common/messages/Message';
+import * as MessageTypes from '../common/messages/MessageTypes';
 
 export default class Connection {
     public onConnect: ()=> void;
     public onDisconnect: ()=> void;
-    public onMessage: (msg:string)=>void;
+    public onMessage: (msg:Message)=>void;
     public onError: (e:Event)=>void;
 
     private connString:string = "";
     private socket:WebSocket = null;
+    private pendingGetCallbacks:Object = {};
+
+    private static getRequestId:number = 0;
 
     constructor (
         public hostName:string,
@@ -44,6 +49,27 @@ export default class Connection {
         }
     }
 
+    public sendMessage(msg:Message) {
+        this.send(msg.serialize());
+    }
+
+    public getRequest(subject:string, params:Object, callback:(response:any)=>void) {
+        var request:MessageTypes.GetRequest = new MessageTypes.GetRequest(subject, Connection.getRequestId, params);
+        Connection.getRequestId += 1;
+
+        this.pendingGetCallbacks[request.requestKey] = callback;
+
+        this.sendMessage(request);
+    }
+
+    private onGetResponse(response:MessageTypes.GetResponse) {
+        var callback = this.pendingGetCallbacks[response.requestKey];
+        if (callback) {
+            delete this.pendingGetCallbacks[response.requestKey];
+            callback(response.response);
+        }
+    }
+
     private onSocketConnect = (e:Event) => {
         Log.log("conn", "Connected to " + this.connString);
         this.onConnect();
@@ -60,6 +86,16 @@ export default class Connection {
 
     private onSocketMessage = (message:MessageEvent) => {
         Log.log("connRecv", message.data);
-        this.onMessage(message.data);
+        var parsedMessage:Message = Message.parse(message.data);
+
+        if (parsedMessage) {
+            if (parsedMessage.type == MessageTypes.GET_RESPONSE) {
+                this.onGetResponse(parsedMessage as MessageTypes.GetResponse);
+            } else {
+                this.onMessage(parsedMessage);
+            }
+        } else {
+            Log.log("conn", "Unable to parse message: " + message.data);
+        }
     };
 }

@@ -1,6 +1,8 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 var Log = require('./util/Log');
+var Message_1 = require('../common/messages/Message');
+var MessageTypes = require('../common/messages/MessageTypes');
 var Connection = (function () {
     function Connection(hostName, port) {
         var _this = this;
@@ -8,6 +10,7 @@ var Connection = (function () {
         this.port = port;
         this.connString = "";
         this.socket = null;
+        this.pendingGetCallbacks = {};
         this.onSocketConnect = function (e) {
             Log.log("conn", "Connected to " + _this.connString);
             _this.onConnect();
@@ -21,7 +24,18 @@ var Connection = (function () {
         };
         this.onSocketMessage = function (message) {
             Log.log("connRecv", message.data);
-            _this.onMessage(message.data);
+            var parsedMessage = Message_1.default.parse(message.data);
+            if (parsedMessage) {
+                if (parsedMessage.type == MessageTypes.GET_RESPONSE) {
+                    _this.onGetResponse(parsedMessage);
+                }
+                else {
+                    _this.onMessage(parsedMessage);
+                }
+            }
+            else {
+                Log.log("conn", "Unable to parse message: " + message.data);
+            }
         };
         Log.setLogType("conn", new Log.LogType("", "#fff", "#06c"));
         Log.setLogType("connSend", new Log.LogType("SEND: ", "#93f"));
@@ -51,15 +65,33 @@ var Connection = (function () {
             Log.log("error", err.toString());
         }
     };
+    Connection.prototype.sendMessage = function (msg) {
+        this.send(msg.serialize());
+    };
+    Connection.prototype.getRequest = function (subject, params, callback) {
+        var request = new MessageTypes.GetRequest(subject, Connection.getRequestId, params);
+        Connection.getRequestId += 1;
+        this.pendingGetCallbacks[request.requestKey] = callback;
+        this.sendMessage(request);
+    };
+    Connection.prototype.onGetResponse = function (response) {
+        var callback = this.pendingGetCallbacks[response.requestKey];
+        if (callback) {
+            delete this.pendingGetCallbacks[response.requestKey];
+            callback(response.response);
+        }
+    };
+    Connection.getRequestId = 0;
     return Connection;
 }());
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Connection;
 
-},{"./util/Log":14}],2:[function(require,module,exports){
+},{"../common/messages/Message":23,"../common/messages/MessageTypes":24,"./util/Log":19}],2:[function(require,module,exports){
 "use strict";
 var Log = require('./util/Log');
 var Connection_1 = require('./Connection');
+var LoginManager_1 = require('./LoginManager');
 var TextureLoader_1 = require('./textures/TextureLoader');
 var TextureWorker_1 = require('./textures/TextureWorker');
 var SoundManager_1 = require('./sound/SoundManager');
@@ -69,6 +101,7 @@ var TextElement_1 = require('./interface/TextElement');
 var AttachInfo_1 = require('./interface/AttachInfo');
 var MainMenu_1 = require('./interface/prefabs/MainMenu');
 var InputManager_1 = require('./interface/InputManager');
+var MessageTypes = require('../common/messages/MessageTypes');
 var Game = (function () {
     function Game(viewDiv) {
         this.stage = null;
@@ -76,6 +109,7 @@ var Game = (function () {
         this.viewDiv = null;
         this.viewWidth = 500;
         this.viewHeight = 500;
+        this.loginManager = new LoginManager_1.default();
         this._volatileGraphics = new PIXI.Graphics();
         this._documentResized = true;
         this.onTextureWorkerGetTexture = function (requestKey, texture) {
@@ -150,7 +184,13 @@ var Game = (function () {
     Game.prototype.onConnect = function () {
         this.loadTextures();
     };
-    Game.prototype.onConnectionMessage = function (msg) {
+    Game.prototype.onConnectionMessage = function (message) {
+        if (message.type == MessageTypes.USER) {
+            this.loginManager.onUserMessage(message);
+        }
+        else {
+            console.log("Received unhandled message from server:" + message.serialize());
+        }
     };
     Game.prototype.onConnectionError = function (e) {
         alert("Connection error! Is the server down?");
@@ -182,7 +222,6 @@ var Game = (function () {
     };
     Game.prototype.onSoundsLoaded = function (which) {
         if (which == "initial") {
-            SoundManager_1.default.instance.playMusic("music/fortress");
             this.initMainMenu();
         }
     };
@@ -199,6 +238,7 @@ var Game = (function () {
         this.interfaceRoot.addChild(mainMenu);
         mainMenu.attachToParent(AttachInfo_1.default.Center);
         mainMenu.showMenu("login");
+        this.loginManager.login("testy", "abc123");
     };
     Game.instance = null;
     Game.useDebugGraphics = true;
@@ -207,7 +247,70 @@ var Game = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
 
-},{"./Connection":1,"./interface/AttachInfo":3,"./interface/InputManager":4,"./interface/InterfaceElement":5,"./interface/TextElement":6,"./interface/prefabs/MainMenu":7,"./sound/SoundAssets":9,"./sound/SoundManager":10,"./textures/TextureLoader":11,"./textures/TextureWorker":12,"./util/Log":14}],3:[function(require,module,exports){
+},{"../common/messages/MessageTypes":24,"./Connection":1,"./LoginManager":3,"./interface/AttachInfo":4,"./interface/InputManager":6,"./interface/InterfaceElement":7,"./interface/TextElement":9,"./interface/prefabs/MainMenu":11,"./sound/SoundAssets":13,"./sound/SoundManager":14,"./textures/TextureLoader":16,"./textures/TextureWorker":17,"./util/Log":19}],3:[function(require,module,exports){
+"use strict";
+var Util = require('../common/Util');
+var MessageTypes = require('../common/messages/MessageTypes');
+var Game_1 = require('./Game');
+var LoginManager = (function () {
+    function LoginManager() {
+        this.userId = -1;
+        this.userName = "Naebdy!";
+    }
+    Object.defineProperty(LoginManager.prototype, "userString", {
+        get: function () { return "User " + this.userId + " (" + this.userName + ")"; },
+        enumerable: true,
+        configurable: true
+    });
+    LoginManager.prototype.login = function (name, pass) {
+        var msg = new MessageTypes.UserMessage("login", {
+            name: name,
+            pass: pass
+        });
+        Game_1.default.instance.connection.sendMessage(msg);
+    };
+    LoginManager.prototype.createUser = function (name, pass, loginOnSuccess) {
+        if (loginOnSuccess === void 0) { loginOnSuccess = false; }
+        var msg = new MessageTypes.UserMessage("createUser", {
+            name: name,
+            pass: pass
+        });
+        Game_1.default.instance.connection.sendMessage(msg);
+    };
+    LoginManager.prototype.onUserMessage = function (msg) {
+        var params = msg.params;
+        if (msg.action == "login") {
+            if (msg.success) {
+                this.userId = params["id"];
+                this.userName = params["name"];
+                this.onLogin();
+            }
+            else {
+                console.log("Failed to log in: " + msg.failReason);
+            }
+        }
+        else if (msg.action == "createUser") {
+            if (msg.success) {
+            }
+            else {
+                console.log("Failed to create user: " + msg.failReason);
+            }
+        }
+    };
+    LoginManager.prototype.onLogin = function () {
+        console.log("Logged in as " + this.userString);
+        Game_1.default.instance.connection.getRequest("games", {}, function (response) {
+            if (response && Util.isArray(response)) {
+                console.log("Current games:\n" + JSON.stringify(response));
+            }
+        });
+    };
+    return LoginManager;
+}());
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = LoginManager;
+
+},{"../common/Util":21,"../common/messages/MessageTypes":24,"./Game":2}],4:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
 var AttachInfo = (function () {
@@ -233,7 +336,140 @@ var AttachInfo = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AttachInfo;
 
-},{"../../common/Vector2D":15}],4:[function(require,module,exports){
+},{"../../common/Vector2D":22}],5:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var InterfaceElement_1 = require('./InterfaceElement');
+var ElementList = (function (_super) {
+    __extends(ElementList, _super);
+    function ElementList(width, orientation, padding, align) {
+        if (orientation === void 0) { orientation = ElementList.VERTICAL; }
+        if (padding === void 0) { padding = 5; }
+        if (align === void 0) { align = ElementList.LEFT; }
+        _super.call(this);
+        this._childBounds = [];
+        this._debugColor = 0xffff00;
+        this._orientation = orientation;
+        this._padding = padding;
+        this._alignment = align;
+        this._className = "ElementList";
+        if (orientation == ElementList.VERTICAL) {
+            this._width = width;
+        }
+        else {
+            this._height = width;
+        }
+    }
+    ElementList.prototype.addChild = function (child, redoLayout) {
+        if (redoLayout === void 0) { redoLayout = true; }
+        _super.prototype.addChild.call(this, child);
+        this._childBounds.push(0);
+        if (redoLayout) {
+            this.redoLayout(child);
+        }
+    };
+    ElementList.prototype.addChildAt = function (child, index, redoLayout) {
+        if (redoLayout === void 0) { redoLayout = true; }
+        _super.prototype.addChildAt.call(this, child, index);
+        this._childBounds.push(0);
+        if (redoLayout) {
+            this.redoLayout(child);
+        }
+    };
+    ElementList.prototype.removeChild = function (child) {
+        var index = this._children.indexOf(child);
+        _super.prototype.removeChild.call(this, child);
+        if (index != -1 && index < this._children.length) {
+            this._childBounds.pop();
+            this.redoLayout(this._children[index]);
+        }
+    };
+    ElementList.prototype.redoLayout = function (fromChild) {
+        if (fromChild === void 0) { fromChild = null; }
+        var index = -1;
+        if (fromChild == null && this._children.length > 0) {
+            index = 0;
+        }
+        else if (fromChild != null) {
+            index = this._children.indexOf(fromChild);
+        }
+        if (index == -1)
+            return;
+        var offset = 0;
+        var child;
+        if (index > 0)
+            offset = this._childBounds[index - 1];
+        for (; index < this._children.length; index++) {
+            child = this._children[index];
+            if (this._orientation == ElementList.VERTICAL) {
+                child.y = offset;
+                offset += child.height + this._padding;
+                switch (this._alignment) {
+                    case ElementList.LEFT:
+                        child.x = 0;
+                        break;
+                    case ElementList.RIGHT:
+                        child.x = this.width - child.width;
+                        break;
+                    case ElementList.CENTRE:
+                        child.x = (this.width - child.width) / 2;
+                        break;
+                }
+            }
+            else {
+                child.x = offset;
+                offset += child.width + this._padding;
+                switch (this._alignment) {
+                    case ElementList.TOP:
+                        child.y = 0;
+                        break;
+                    case ElementList.BOTTOM:
+                        child.y = this.height - child.height;
+                        break;
+                    case ElementList.CENTRE:
+                        child.y = (this.height - child.height) / 2;
+                        break;
+                }
+            }
+            this._childBounds[index] = offset;
+        }
+        var length = 0;
+        if (this._children.length > 0) {
+            var startElement = this._children[0];
+            var endElement = this._children[this._children.length - 1];
+            if (this._orientation == ElementList.VERTICAL) {
+                length = (endElement.y + endElement.height) - startElement.y;
+            }
+            else {
+                length = (endElement.x + endElement.width) - startElement.x;
+            }
+        }
+        if (this._orientation == ElementList.VERTICAL) {
+            this._height = length;
+        }
+        else {
+            this._width = length;
+        }
+        this.onResize(false);
+    };
+    ElementList.HORIZONTAL = 0;
+    ElementList.VERTICAL = 1;
+    ElementList.NONE = -1;
+    ElementList.LEFT = 0;
+    ElementList.TOP = ElementList.LEFT;
+    ElementList.RIGHT = 1;
+    ElementList.BOTTOM = ElementList.RIGHT;
+    ElementList.CENTRE = 2;
+    return ElementList;
+}(InterfaceElement_1.default));
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = ElementList;
+
+},{"./InterfaceElement":7}],6:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
 var Game_1 = require('../Game');
@@ -393,7 +629,7 @@ var InputManager = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InputManager;
 
-},{"../../common/Vector2D":15,"../Game":2}],5:[function(require,module,exports){
+},{"../../common/Vector2D":22,"../Game":2}],7:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
 var InputManager_1 = require('./InputManager');
@@ -663,12 +899,15 @@ var InterfaceElement = (function () {
             this.positionRelativeTo(this._parent, this._attach);
         }
     };
-    InterfaceElement.prototype.onResize = function () {
+    InterfaceElement.prototype.onResize = function (notifyChildren) {
+        if (notifyChildren === void 0) { notifyChildren = true; }
         if (this._attach)
             this.positionRelativeTo(this._parent, this._attach);
-        var len = this._children.length;
-        for (var i = 0; i < len; i++) {
-            this._children[i].onParentResize();
+        if (notifyChildren) {
+            var len = this._children.length;
+            for (var i = 0; i < len; i++) {
+                this._children[i].onParentResize();
+            }
         }
     };
     return InterfaceElement;
@@ -676,7 +915,62 @@ var InterfaceElement = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceElement;
 
-},{"../../common/Vector2D":15,"../Game":2,"./InputManager":4}],6:[function(require,module,exports){
+},{"../../common/Vector2D":22,"../Game":2,"./InputManager":6}],8:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var InterfaceElement_1 = require('./InterfaceElement');
+var TextureGenerator = require('../textures/TextureGenerator');
+var Panel = (function (_super) {
+    __extends(Panel, _super);
+    function Panel(width, height, style) {
+        _super.call(this);
+        this._debugColor = 0x00ff00;
+        this._needRedraw = true;
+        this._className = "Panel";
+        this._width = width;
+        this._height = height;
+        this._style = style;
+        this._texture = null;
+        this.clickable = true;
+        this.draw();
+        this._sprite = new PIXI.Sprite(this._texture);
+        this._displayObject.addChild(this._sprite);
+    }
+    Panel.prototype.resize = function (width, height) {
+        if (width != this._width || height != this._height)
+            this._needRedraw = true;
+        _super.prototype.resize.call(this, width, height);
+    };
+    Panel.prototype.draw = function () {
+        _super.prototype.draw.call(this);
+        if (this._needRedraw) {
+            this._needRedraw = false;
+            var hadTexture = false;
+            if (this._texture) {
+                hadTexture = true;
+                this._texture.resize(this._width, this._height, true);
+            }
+            switch (this._style) {
+                case Panel.BASICBAR:
+                    this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x999999);
+                    break;
+                default:
+                    this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x333333, 2, 0x999999);
+            }
+        }
+    };
+    Panel.BASIC = 0;
+    Panel.BASICBAR = 1;
+    return Panel;
+}(InterfaceElement_1.default));
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Panel;
+
+},{"../textures/TextureGenerator":15,"./InterfaceElement":7}],9:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -720,15 +1014,15 @@ var TextElement = (function (_super) {
     TextElement.prototype.resizeToPixiText = function () {
         this.resize(this._pixiText.width, this._pixiText.height);
     };
-    TextElement.basicText = { font: '14px Open Sans', fill: 0xffffff, align: 'left' };
-    TextElement.bigText = { font: '32px Open Sans', fill: 0xffffff, align: 'left' };
-    TextElement.veryBigText = { font: '48px Open Sans', fill: 0xffffff, align: 'left' };
+    TextElement.basicText = new PIXI.TextStyle({ fontSize: 14, fontFamily: 'Open Sans', fill: 0xffffff, align: 'left' });
+    TextElement.bigText = new PIXI.TextStyle({ fontSize: 32, fontFamily: 'Open Sans', fill: 0xffffff, align: 'left' });
+    TextElement.veryBigText = new PIXI.TextStyle({ fontSize: 48, fontFamily: 'Open Sans', fill: 0xffffff, align: 'left' });
     return TextElement;
 }(InterfaceElement_1.default));
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextElement;
 
-},{"./InterfaceElement":5}],7:[function(require,module,exports){
+},{"./InterfaceElement":7}],10:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -738,6 +1032,41 @@ var __extends = (this && this.__extends) || function (d, b) {
 var InterfaceElement_1 = require('../InterfaceElement');
 var TextElement_1 = require('../TextElement');
 var AttachInfo_1 = require('../AttachInfo');
+var Panel_1 = require('../Panel');
+var ElementList_1 = require('../ElementList');
+var LoginMenu = (function (_super) {
+    __extends(LoginMenu, _super);
+    function LoginMenu() {
+        _super.call(this);
+        this._bg = new Panel_1.default(350, 500, Panel_1.default.BASICBAR);
+        this.addChild(this._bg);
+        this._list = new ElementList_1.default(350, ElementList_1.default.VERTICAL, 5, ElementList_1.default.CENTRE);
+        this.addChild(this._list);
+        var strings = ['One way', 'or another', "I'm gonna find ya"];
+        for (var i = 0; i < strings.length; i++) {
+            var text = new TextElement_1.default(strings[i], TextElement_1.default.bigText);
+            this._list.addChild(text);
+        }
+        this._width = this._bg.width;
+        this._height = this._bg.height;
+        this._bg.attachToParent(AttachInfo_1.default.Center);
+        this._list.attachToParent(AttachInfo_1.default.Center);
+    }
+    return LoginMenu;
+}(InterfaceElement_1.default));
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = LoginMenu;
+
+},{"../AttachInfo":4,"../ElementList":5,"../InterfaceElement":7,"../Panel":8,"../TextElement":9}],11:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var InterfaceElement_1 = require('../InterfaceElement');
+var AttachInfo_1 = require('../AttachInfo');
+var LoginMenu_1 = require('./LoginMenu');
 var Log = require('../../util/Log');
 var MainMenu = (function (_super) {
     __extends(MainMenu, _super);
@@ -746,7 +1075,7 @@ var MainMenu = (function (_super) {
         this._currentMenuName = "";
         this._currentMenu = null;
         this._className = "MainMenu";
-        this._loginMenu = new TextElement_1.default("Login!", TextElement_1.default.veryBigText);
+        this._loginMenu = new LoginMenu_1.default();
     }
     MainMenu.prototype.showMenu = function (name) {
         if (name == this._currentMenuName) {
@@ -767,21 +1096,20 @@ var MainMenu = (function (_super) {
         this._currentMenu = this._loginMenu;
         this.addChild(this._loginMenu);
         this._loginMenu.attachToParent(AttachInfo_1.default.Center);
-        console.log(this);
     };
     return MainMenu;
 }(InterfaceElement_1.default));
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MainMenu;
 
-},{"../../util/Log":14,"../AttachInfo":3,"../InterfaceElement":5,"../TextElement":6}],8:[function(require,module,exports){
+},{"../../util/Log":19,"../AttachInfo":4,"../InterfaceElement":7,"./LoginMenu":10}],12:[function(require,module,exports){
 "use strict";
 var Game_1 = require('./Game');
 var viewDiv = document.getElementById("viewDiv");
 var game = new Game_1.default(viewDiv);
 game.init();
 
-},{"./Game":2}],9:[function(require,module,exports){
+},{"./Game":2}],13:[function(require,module,exports){
 "use strict";
 exports.mainMenuMusic = [
     ["music/fortress", "sound/music/fortress.ogg"]
@@ -792,7 +1120,7 @@ exports.interfaceSounds = [
     ["ui/nope", "sound/ui/nope.ogg"]
 ];
 
-},{}],10:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 "use strict";
 var SoundLoadRequest = (function () {
     function SoundLoadRequest(name, list, onComplete, onProgress) {
@@ -884,7 +1212,25 @@ var SoundManager = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = SoundManager;
 
-},{}],11:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
+"use strict";
+var Game_1 = require('../Game');
+function simpleRectangle(target, width, height, color, borderWidth, borderColor) {
+    if (borderWidth === void 0) { borderWidth = 0; }
+    if (borderColor === void 0) { borderColor = 0; }
+    if (!target)
+        target = PIXI.RenderTexture.create(width, height);
+    var g = Game_1.default.instance.volatileGraphics;
+    g.lineStyle(borderWidth, borderColor, 1);
+    g.beginFill(color, 1);
+    g.drawRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
+    g.endFill();
+    Game_1.default.instance.renderer.render(g, target);
+    return target;
+}
+exports.simpleRectangle = simpleRectangle;
+
+},{"../Game":2}],16:[function(require,module,exports){
 "use strict";
 var TextureLoader = (function () {
     function TextureLoader(sheetName, mapName, callback) {
@@ -944,7 +1290,7 @@ var TextureLoader = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureLoader;
 
-},{}],12:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 "use strict";
 var ColorUtil = require('../util/ColorUtil');
 var TextureWorker = (function () {
@@ -1072,7 +1418,7 @@ var TextureWorker = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureWorker;
 
-},{"../util/ColorUtil":13}],13:[function(require,module,exports){
+},{"../util/ColorUtil":18}],18:[function(require,module,exports){
 "use strict";
 function rgbToNumber(r, g, b) {
     return (r << 16) + (g << 8) + b;
@@ -1094,7 +1440,7 @@ function rgbaString(r, g, b, a) {
 }
 exports.rgbaString = rgbaString;
 
-},{}],14:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 "use strict";
 var types = {};
 var LogType = (function () {
@@ -1126,7 +1472,120 @@ function log(typeName, msg) {
 }
 exports.log = log;
 
-},{}],15:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
+"use strict";
+var IDPool = (function () {
+    function IDPool(alphabet) {
+        if (alphabet === void 0) { alphabet = IDPool._defaultAlphabet; }
+        this._indeces = [0];
+        this._unused = [];
+        this._maxUnused = 100;
+        this._alphabet = alphabet;
+    }
+    Object.defineProperty(IDPool.prototype, "maxUnused", {
+        set: function (num) {
+            this._maxUnused = num;
+            var len = this._unused.length;
+            if (len > num)
+                this._unused.splice(num - 1, len - num);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    IDPool.prototype.getID = function () {
+        if (this._unused.length > 0)
+            return this._unused.pop();
+        else
+            return this._createID();
+    };
+    IDPool.prototype.relinquishID = function (id) {
+        if (this._unused.length < this._maxUnused)
+            this._unused.push(id);
+    };
+    IDPool.prototype._createID = function () {
+        var id = '';
+        for (var i = 0; i < this._indeces.length; i++) {
+            id += this._alphabet[this._indeces[i]];
+        }
+        this._increment();
+        return id;
+    };
+    IDPool.prototype._increment = function () {
+        var index = this._indeces.length - 1;
+        while (true) {
+            this._indeces[index] += 1;
+            if (this._indeces[index] == this._alphabet.length) {
+                this._indeces[index] = 0;
+                index -= 1;
+                if (index < 0)
+                    this._indeces.unshift(0);
+                else
+                    continue;
+            }
+            break;
+        }
+    };
+    IDPool._defaultAlphabet = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~`!@#$%^&*()-_=+[]{}|;:<>,.?/';
+    IDPool._alphanumeric = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    return IDPool;
+}());
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = IDPool;
+
+},{}],21:[function(require,module,exports){
+"use strict";
+function noop() { }
+exports.noop = noop;
+function shallowCopy(obj) {
+    var ret = {};
+    var keys = Object.keys(obj);
+    var prop;
+    for (var i = 0; i < keys.length; i++) {
+        prop = keys[i];
+        ret[prop] = obj[prop];
+    }
+    return ret;
+}
+exports.shallowCopy = shallowCopy;
+function stripBraces(s) {
+    return s.substr(1, s.length - 1);
+}
+exports.stripBraces = stripBraces;
+function clamp(num, min, max) {
+    if (num > max)
+        return max;
+    if (num < min)
+        return min;
+    return num;
+}
+exports.clamp = clamp;
+function isString(x) {
+    return (typeof x === 'string' || x instanceof String);
+}
+exports.isString = isString;
+function isInt(x) {
+    return (isNumber(x) && Math.floor(x) == x);
+}
+exports.isInt = isInt;
+function isNumber(x) {
+    return (typeof x === 'number');
+}
+exports.isNumber = isNumber;
+function isArray(x) {
+    return Array.isArray(x);
+}
+exports.isArray = isArray;
+function isObject(x, allowNull) {
+    if (allowNull === void 0) { allowNull = false; }
+    return (typeof x === 'object' && !isArray(x) && (x != null || allowNull));
+}
+exports.isObject = isObject;
+function isCoordinate(x) {
+    return (isArray(x) && x.length == 2 && isNumber(x[0]) && isNumber(x[1]));
+}
+exports.isCoordinate = isCoordinate;
+
+},{}],22:[function(require,module,exports){
 "use strict";
 var Vector2D = (function () {
     function Vector2D(x, y) {
@@ -1213,4 +1672,334 @@ var Vector2D = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Vector2D;
 
-},{}]},{},[8]);
+},{}],23:[function(require,module,exports){
+"use strict";
+var IDPool_1 = require('../IDPool');
+var Vector2D_1 = require('../Vector2D');
+var Util = require('../Util');
+var Message = (function () {
+    function Message(type) {
+        this.type = type;
+    }
+    Message.prototype.serialize = function () {
+        return this.type.toString();
+    };
+    Message.parse = function (s) {
+        var splitIndex = s.indexOf('[');
+        if (splitIndex === -1) {
+            console.log("parse: nowhere to split");
+            return null;
+        }
+        var msgType = parseInt(s.substring(0, splitIndex), 10);
+        if (isNaN(msgType)) {
+            console.log("parse: " + s.substring(0, splitIndex) + " is NaN");
+            return null;
+        }
+        var args;
+        try {
+            args = JSON.parse(s.substring(splitIndex));
+        }
+        catch (e) {
+            console.log("parse: invalid json");
+            return null;
+        }
+        if (!Util.isArray(args))
+            return null;
+        var msgClass = MessageTypes.getClassByType(msgType);
+        if (msgClass === null) {
+            console.log("parse: no class for type " + msgType);
+            return null;
+        }
+        var msg = msgClass.fromArgs(args);
+        if (msg)
+            return msg;
+        console.log("parse: class evaluator rejected arguments");
+        return null;
+    };
+    Message.fromArgs = function (args) {
+        return null;
+    };
+    Message.serializeParams = function (obj) {
+        var s = JSON.stringify(Message.abbreviate(obj));
+        return s.substring(1, s.length - 1);
+    };
+    Message.abbreviate = function (obj) {
+        var clone = {};
+        var keys = Object.keys(obj);
+        var key, val;
+        for (var i = 0; i < keys.length; i++) {
+            key = keys[i];
+            val = obj[key];
+            if (val instanceof Vector2D_1.default) {
+                val = [val.x, val.y];
+            }
+            else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                val = Message.abbreviate(val);
+            }
+            clone[Message.getAbbreviation(key)] = val;
+        }
+        return clone;
+    };
+    Message.getAbbreviation = function (term) {
+        if (Message._abbreviations == null)
+            Message.generateAbbreviations();
+        if (term.length > 2) {
+            var abbreviation = Message._abbreviations[term];
+            if (abbreviation)
+                return abbreviation;
+        }
+        return term;
+    };
+    Message.expand = function (obj) {
+        var keys = Object.keys(obj);
+        var key, val, fullKey;
+        for (var i = 0; i < keys.length; i++) {
+            key = keys[i];
+            val = obj[key];
+            fullKey = Message.getExpansion(key);
+            if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+                Message.expand(val);
+            }
+            else if (Array.isArray(val)
+                && val.length === 2
+                && typeof val[0] === 'number' && typeof val[1] === 'number') {
+                val = new Vector2D_1.default(val.x, val.y);
+            }
+            if (key !== fullKey) {
+                obj[fullKey] = val;
+                delete obj[key];
+            }
+        }
+    };
+    Message.getExpansion = function (term) {
+        if (Message._abbreviations == null)
+            Message.generateAbbreviations();
+        if (term.length > 1) {
+            var expansion = Message._expansions[term];
+            if (expansion)
+                return expansion;
+        }
+        return term;
+    };
+    Message.generateAbbreviations = function () {
+        Message._abbreviations = {};
+        Message._expansions = {};
+        var terms = [
+            'step',
+            'unit',
+            'direction',
+            'target',
+            'amount',
+            'source',
+            'position',
+            'point',
+            'destination',
+            'queue',
+            'killer',
+            'success',
+            'moveSpeed',
+            'attackDamage',
+            'attackRange',
+            'attackSpeed',
+            'radius',
+            'name',
+            'password',
+            'success',
+            'alive',
+            'name',
+            'action',
+            'lastBroadcastPosition'
+        ];
+        var pool = new IDPool_1.default();
+        var term, abbreviation;
+        for (var i = 0; i < terms.length; i++) {
+            term = terms[i];
+            abbreviation = '?' + pool.getID();
+            Message._abbreviations[term] = abbreviation;
+            Message._expansions[abbreviation] = term;
+        }
+    };
+    Message._abbreviations = null;
+    Message._expansions = null;
+    return Message;
+}());
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Message;
+var MessageTypes = require('./MessageTypes');
+
+},{"../IDPool":20,"../Util":21,"../Vector2D":22,"./MessageTypes":24}],24:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var Message_1 = require('./Message');
+var Util = require('../Util');
+exports.PING = 0;
+exports.USER = 10;
+exports.CRYPTO = 11;
+exports.GET_REQUEST = 12;
+exports.GET_RESPONSE = 13;
+exports.GAME_STATUS = 14;
+var classesByType = [];
+function getClassByType(type) {
+    var c = classesByType[type];
+    if (c)
+        return c;
+    return null;
+}
+exports.getClassByType = getClassByType;
+var Ping = (function (_super) {
+    __extends(Ping, _super);
+    function Ping() {
+        _super.call(this, exports.PING);
+    }
+    Ping.fromArgs = function (args) {
+        return Ping._instance;
+    };
+    Ping.prototype.serialize = function () {
+        return "0[]";
+    };
+    Ping._instance = new Ping();
+    return Ping;
+}(Message_1.default));
+exports.Ping = Ping;
+classesByType[exports.PING] = Ping;
+var UserMessage = (function (_super) {
+    __extends(UserMessage, _super);
+    function UserMessage(action, params) {
+        _super.call(this, exports.USER);
+        this.action = action;
+        this.params = params;
+    }
+    Object.defineProperty(UserMessage.prototype, "success", {
+        get: function () {
+            if (this.params && this.params.hasOwnProperty("success") && this.params["success"])
+                return true;
+            return false;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(UserMessage.prototype, "failReason", {
+        get: function () {
+            if (this.params && this.params.hasOwnProperty("failReason"))
+                return this.params["failReason"];
+            return "Unknown reason";
+        },
+        enumerable: true,
+        configurable: true
+    });
+    UserMessage.fromArgs = function (args) {
+        var action = args[0];
+        var params = args[1];
+        if (Util.isString(action) && Util.isObject(params))
+            return new UserMessage(action, params);
+        return null;
+    };
+    UserMessage.prototype.serialize = function () {
+        var s = _super.prototype.serialize.call(this);
+        s += JSON.stringify([this.action, this.params]);
+        return s;
+    };
+    return UserMessage;
+}(Message_1.default));
+exports.UserMessage = UserMessage;
+classesByType[exports.USER] = UserMessage;
+var CryptoMessage = (function (_super) {
+    __extends(CryptoMessage, _super);
+    function CryptoMessage(action, ciphertext) {
+        _super.call(this, exports.CRYPTO);
+        this.action = action;
+        this.ciphertext = ciphertext;
+    }
+    CryptoMessage.fromArgs = function (args) {
+        var action = args[0];
+        var ciphertext = args[1];
+        if (Util.isString(action) && Util.isString(ciphertext))
+            return new CryptoMessage(action, ciphertext);
+        return null;
+    };
+    CryptoMessage.prototype.serialize = function () {
+        var s = _super.prototype.serialize.call(this);
+        s += JSON.stringify([this.action, this.ciphertext]);
+        return s;
+    };
+    return CryptoMessage;
+}(Message_1.default));
+exports.CryptoMessage = CryptoMessage;
+classesByType[exports.CRYPTO] = CryptoMessage;
+var GetRequest = (function (_super) {
+    __extends(GetRequest, _super);
+    function GetRequest(subject, requestKey, params) {
+        _super.call(this, exports.GET_REQUEST);
+        this.subject = subject;
+        this.requestKey = requestKey;
+        this.params = params;
+    }
+    GetRequest.fromArgs = function (args) {
+        if (Util.isString(args[0])
+            && Util.isInt(args[1])
+            && Util.isObject(args[2])) {
+            return new GetRequest(args[0], args[1], args[2]);
+        }
+        return null;
+    };
+    GetRequest.prototype.serialize = function () {
+        var s = _super.prototype.serialize.call(this);
+        s += JSON.stringify([this.subject, this.requestKey, this.params]);
+        return s;
+    };
+    return GetRequest;
+}(Message_1.default));
+exports.GetRequest = GetRequest;
+classesByType[exports.GET_REQUEST] = GetRequest;
+var GetResponse = (function (_super) {
+    __extends(GetResponse, _super);
+    function GetResponse(requestKey, response) {
+        _super.call(this, exports.GET_RESPONSE);
+        this.requestKey = requestKey;
+        this.response = response;
+    }
+    GetResponse.fromArgs = function (args) {
+        if (Util.isInt(args[0]) && args.length == 2)
+            return new GetResponse(args[0], args[1]);
+        return null;
+    };
+    GetResponse.prototype.serialize = function () {
+        var s = _super.prototype.serialize.call(this);
+        s += JSON.stringify([this.requestKey, this.response]);
+        return s;
+    };
+    return GetResponse;
+}(Message_1.default));
+exports.GetResponse = GetResponse;
+classesByType[exports.GET_RESPONSE] = GetResponse;
+var GameStatus = (function (_super) {
+    __extends(GameStatus, _super);
+    function GameStatus(gameId, frame, frameInterval) {
+        _super.call(this, exports.GAME_STATUS);
+        this.gameId = gameId;
+        this.frame = frame;
+        this.frameInterval = frameInterval;
+    }
+    GameStatus.fromArgs = function (args) {
+        if (Util.isInt(args[0])
+            && Util.isInt(args[1])
+            && Util.isNumber(args[2])) {
+            return new GameStatus(args[0], args[1], args[2]);
+        }
+        return null;
+    };
+    GameStatus.prototype.serialize = function () {
+        var s = _super.prototype.serialize.call(this);
+        s += JSON.stringify([this.gameId, this.frame, this.frameInterval]);
+        return s;
+    };
+    return GameStatus;
+}(Message_1.default));
+exports.GameStatus = GameStatus;
+classesByType[exports.GAME_STATUS] = GameStatus;
+
+},{"../Util":21,"./Message":23}]},{},[12]);

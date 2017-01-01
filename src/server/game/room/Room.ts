@@ -42,14 +42,19 @@ export default class Room extends GenericManager {
 	}
 
 	public subscribePlayer(player:Player) {
-		if (this._subscribedPlayersById[player.id])
+		if (!player.user) {
+			this.log("player has no user. Not subscribing them.");
+			return;
+		}
+
+		if (this._subscribedPlayersById[player.userId])
 		{
-			this.log("Player " + player.id + " is already subscribed.");
+			this.log("Player " + player.userId + " is already subscribed.");
 			return;
 		}
 
 		this._subscribedPlayers.push(player);
-		this._subscribedPlayersById[player.id] = player;
+		this._subscribedPlayersById[player.userId] = player;
 
 		player.subscribedRooms.push(this);
 
@@ -57,15 +62,15 @@ export default class Room extends GenericManager {
 	}
 
 	public unsubscribePlayer(player:Player) {
-		if (!this._subscribedPlayersById[player.id])
+		if (!this._subscribedPlayersById[player.userId])
 		{
-			this.log("Player " + player.id + " wasn't subscribed.");
+			this.log("Player " + player.userId + " wasn't subscribed.");
 			return;
 		}
 
 		var index:number = this._subscribedPlayers.indexOf(player);
 		this._subscribedPlayers.splice(index, 1);
-		delete this._subscribedPlayersById[player.id];
+		delete this._subscribedPlayersById[player.userId];
 
 		index = player.subscribedRooms.indexOf(this);
 		if (index >= 0) {
@@ -76,6 +81,6 @@ export default class Room extends GenericManager {
 	}
 
 	protected log(message:string) {
-		console.log("Room " + this.id + ": " + message);
+		console.log(this.name + ": " + message);
 	}
 }

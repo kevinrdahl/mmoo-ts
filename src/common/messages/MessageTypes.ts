@@ -20,9 +20,6 @@ export const GAME_STATUS = 14;
  * This file will likely become very long, but it's basically just type checking so oh well.
  */
 var classesByType = [];
-classesByType[PING] = Ping;
-classesByType[USER] = UserMessage;
-classesByType[CRYPTO] = CryptoMessage;
 
 export function getClassByType(type:number) {
 	var c = classesByType[type];
@@ -45,10 +42,21 @@ export class Ping extends Message {
 		return "0[]";
 	}
 }
+classesByType[PING] = Ping;
 
 export class UserMessage extends Message {
 	public action:string;
 	public params:Object;
+
+	public get success():boolean {
+		if (this.params && this.params.hasOwnProperty("success") && this.params["success"]) return true;
+		return false;
+	}
+
+	public get failReason():string {
+		if (this.params && this.params.hasOwnProperty("failReason")) return this.params["failReason"];
+		return "Unknown reason";
+	}
 
 	constructor(action:string, params:Object) {
 		super(USER);
@@ -69,6 +77,7 @@ export class UserMessage extends Message {
 		return s;
 	}
 }
+classesByType[USER] = UserMessage;
 
 export class CryptoMessage extends Message {
 	public action:string;
@@ -93,50 +102,64 @@ export class CryptoMessage extends Message {
 		return s;
 	}
 }
+classesByType[CRYPTO] = CryptoMessage;
 
+/**
+ * General-purpose get. Game lists, definitions, whatever.
+ */
 export class GetRequest extends Message {
 	public subject:string;
+	public requestKey:number;
+	public params:Object;
 
-	constructor(subject:string) {
+	constructor(subject:string, requestKey:number, params:Object) {
 		super(GET_REQUEST);
 		this.subject = subject;
+		this.requestKey = requestKey;
+		this.params = params;
 	}
 
 	public static fromArgs(args:Array<any>):GetRequest {
-		var subject = args[0];
-		if (Util.isString(subject)) return new GetRequest(subject);
+		if (
+			Util.isString(args[0])
+			&& Util.isInt(args[1])
+			&& Util.isObject(args[2])
+		) {
+			return new GetRequest(args[0], args[1], args[2]);
+		}
 		return null;
 	}
 
 	public serialize():string {
 		var s = super.serialize();
-		s += JSON.stringify([this.subject]);
+		s += JSON.stringify([this.subject, this.requestKey, this.params]);
 		return s;
 	}
 }
+classesByType[GET_REQUEST] = GetRequest;
 
 export class GetResponse extends Message {
-	public subject:string;
+	public requestKey:number;
 	public response:any;
 
-	constructor(subject:string, response:any) {
+	constructor(requestKey:number, response:any) {
 		super(GET_RESPONSE);
-		this.subject = subject;
+		this.requestKey = requestKey;
 		this.response = response;
 	}
 
 	public static fromArgs(args:Array<any>):GetResponse {
-		var subject = args[0];
-		if (Util.isString(subject) && args.length == 2) return new GetResponse(subject, args[1]);
+		if (Util.isInt(args[0]) && args.length == 2) return new GetResponse(args[0], args[1]);
 		return null;
 	}
 
 	public serialize():string {
 		var s = super.serialize();
-		s += JSON.stringify([this.subject, this.response]);
+		s += JSON.stringify([this.requestKey, this.response]);
 		return s;
 	}
 }
+classesByType[GET_RESPONSE] = GetResponse;
 
 /**
  * Reports a Game's current frame and simulation speed
@@ -163,4 +186,11 @@ export class GameStatus extends Message {
 		}
 		return null;
 	}
+
+	public serialize():string {
+		var s = super.serialize();
+		s += JSON.stringify([this.gameId, this.frame, this.frameInterval]);
+		return s;
+	}
 }
+classesByType[GAME_STATUS] = GameStatus;
