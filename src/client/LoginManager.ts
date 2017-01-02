@@ -50,9 +50,16 @@ export default class LoginManager {
 		}
 		else if (msg.action == "createUser") {
 			if (msg.success) {
-
+				console.log("Created new user");
 			} else {
 				console.log("Failed to create user: " + msg.failReason);
+			}
+		}
+		else if (msg.action == "joinGame") {
+			if (msg.success) {
+				Game.instance.onJoinGame(params["id"]);
+			} else {
+				console.log("Failed to join game: " + msg.failReason);
 			}
 		}
 	}

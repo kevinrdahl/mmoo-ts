@@ -110,6 +110,7 @@ var Game = (function () {
         this.viewWidth = 500;
         this.viewHeight = 500;
         this.loginManager = new LoginManager_1.default();
+        this.joinedGameId = -1;
         this._volatileGraphics = new PIXI.Graphics();
         this._documentResized = true;
         this.onTextureWorkerGetTexture = function (requestKey, texture) {
@@ -148,6 +149,9 @@ var Game = (function () {
         this.stage.addChild(this.debugGraphics);
         this.connect();
         this.render();
+    };
+    Game.prototype.onJoinGame = function (gameId) {
+        this.joinedGameId = gameId;
     };
     Game.prototype.render = function () {
         var _this = this;
@@ -291,9 +295,18 @@ var LoginManager = (function () {
         }
         else if (msg.action == "createUser") {
             if (msg.success) {
+                console.log("Created new user");
             }
             else {
                 console.log("Failed to create user: " + msg.failReason);
+            }
+        }
+        else if (msg.action == "joinGame") {
+            if (msg.success) {
+                Game_1.default.instance.onJoinGame(params["id"]);
+            }
+            else {
+                console.log("Failed to join game: " + msg.failReason);
             }
         }
     };

@@ -18,6 +18,7 @@ import ElementList from './interface/ElementList';
 import AttachInfo from './interface/AttachInfo';
 import MainMenu from './interface/prefabs/MainMenu';
 import InputManager from './interface/InputManager';
+import GameView from './GameView';
 
 import * as MessageTypes from '../common/messages/MessageTypes';
 import Message from '../common/messages/Message';
@@ -38,6 +39,9 @@ export default class Game {
 	public connection: Connection;
 	public textureWorker: TextureWorker;
 	public loginManager:LoginManager = new LoginManager();
+
+	public gameView:GameView = new GameView();
+	public joinedGameId:number = -1;
 
 	get volatileGraphics(): PIXI.Graphics { this._volatileGraphics.clear(); return this._volatileGraphics }
 
@@ -91,6 +95,10 @@ export default class Game {
 		this.render();
 	}
 
+	public onJoinGame(gameId:number) {
+		this.joinedGameId = gameId;
+	}
+
 	private render() {
 		if (this._documentResized) {
 			this._documentResized = false;
@@ -136,11 +144,22 @@ export default class Game {
 	}
 
 	private onConnectionMessage(message:Message) {
-		if (message.type == MessageTypes.USER) {
-			this.loginManager.onUserMessage(message as MessageTypes.UserMessage);
-		} else {
-			console.log("Received unhandled message from server:" + message.serialize());
+		switch (message.type) {
+			case MessageTypes.USER:
+				this.loginManager.onUserMessage(message as MessageTypes.UserMessage);
+				break;
+
+			case MessageTypes.GAME_STATUS:
+				this.onGameStatusMessage(message as MessageTypes.GameStatus);
+				break;
+
+			default:
+				console.log("Received unhandled message from server:" + message.serialize());
 		}
+	}
+
+	private onGameStatusMessage(message:MessageTypes.GameStatus) {
+		
 	}
 
 	private onConnectionError(e:Event) {
