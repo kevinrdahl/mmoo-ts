@@ -1,5 +1,6 @@
 import Room from './room/Room';
 import Player from './Player';
+import PlayerGroup from './PlayerGroup';
 import WebSocketClient from '../WebSocketClient';
 import User from '../user/User';
 
@@ -11,7 +12,8 @@ export default class Game {
 
 	protected _id:number;
 	protected _rooms:Array<Room> = [];
-	protected _players:Array<Player> = [];
+	protected _players:PlayerGroup = new PlayerGroup(); //these players have ENTERED the game
+	protected _pendingPlayers:PlayerGroup = new PlayerGroup(); //these players have only joined
 
 	//TODO: variable simulation rate
 	protected _updateInterval:number = Math.ceil(1000 / 15); //update at ~15fps
@@ -102,28 +104,28 @@ export default class Game {
 		player.client = client;
 		client.player = player;
 
-		client.sendMessage(new MessageTypes.GameStatus(this._id, this._currentFrame, this._updateInterval));
+		//save this for entering the game
+		//client.sendMessage(new MessageTypes.GameStatus(this._id, this._currentFrame, this._updateInterval));
 
-		this.addPlayer(player);
+		this._pendingPlayers.addPlayer(player);
+	}
+
+	//TODO: as character
+	public playerEnterGame(player:Player) {
+		if (this._players.containsPlayer(player)) {
+			console.log(this.name + ": player has already entered the game");
+			return;
+		}
+
+		this._pendingPlayers.removePlayer(player);
+		this._players.addPlayer(player);
 	}
 
 	public removeClient(client:WebSocketClient) {
 		if (client.player) {
-			this.removePlayer(client.player);
+			this._players.removePlayer(client.player);
+			this._pendingPlayers.removePlayer(client.player);
 			client.player = null;
-		}
-	}
-
-	//TODO: byId
-	protected addPlayer(player:Player) {
-		this._players.push(player);
-	}
-
-	//TODO: byId
-	protected removePlayer(player:Player) {
-		var index:number = this._players.indexOf(player);
-		if (index >= 0) {
-			this._players.splice(index, 1);
 		}
 	}
 

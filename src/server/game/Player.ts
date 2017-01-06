@@ -4,8 +4,16 @@ import Room from './room/Room';
 import Game from './Game';
 
 export default class Player {
+	private _id:number;
+	private static _idNum:number = 1;
+
 	public game:Game = null;
 	public client:WebSocketClient = null;
+
+	public get id():number {
+		return this._id;
+	}
+
 	public get user():User {
 		if (this.client) return this.client.user;
 		return null;
@@ -20,7 +28,8 @@ export default class Player {
 	public subscribedRooms:Array<Room> = []; //expected to be only 1?
 
 	constructor() {
-
+		this._id = Player._idNum;
+		Player._idNum += 1;
 	}
 
 	public init() {
