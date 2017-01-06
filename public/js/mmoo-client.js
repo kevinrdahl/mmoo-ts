@@ -87,7 +87,7 @@ var Connection = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Connection;
 
-},{"../common/messages/Message":23,"../common/messages/MessageTypes":24,"./util/Log":19}],2:[function(require,module,exports){
+},{"../common/messages/Message":24,"../common/messages/MessageTypes":25,"./util/Log":20}],2:[function(require,module,exports){
 "use strict";
 var Log = require('./util/Log');
 var Connection_1 = require('./Connection');
@@ -101,6 +101,7 @@ var TextElement_1 = require('./interface/TextElement');
 var AttachInfo_1 = require('./interface/AttachInfo');
 var MainMenu_1 = require('./interface/prefabs/MainMenu');
 var InputManager_1 = require('./interface/InputManager');
+var GameView_1 = require('./GameView');
 var MessageTypes = require('../common/messages/MessageTypes');
 var Game = (function () {
     function Game(viewDiv) {
@@ -110,6 +111,7 @@ var Game = (function () {
         this.viewWidth = 500;
         this.viewHeight = 500;
         this.loginManager = new LoginManager_1.default();
+        this.gameView = new GameView_1.default();
         this.joinedGameId = -1;
         this._volatileGraphics = new PIXI.Graphics();
         this._documentResized = true;
@@ -189,12 +191,18 @@ var Game = (function () {
         this.loadTextures();
     };
     Game.prototype.onConnectionMessage = function (message) {
-        if (message.type == MessageTypes.USER) {
-            this.loginManager.onUserMessage(message);
+        switch (message.type) {
+            case MessageTypes.USER:
+                this.loginManager.onUserMessage(message);
+                break;
+            case MessageTypes.GAME_STATUS:
+                this.onGameStatusMessage(message);
+                break;
+            default:
+                console.log("Received unhandled message from server:" + message.serialize());
         }
-        else {
-            console.log("Received unhandled message from server:" + message.serialize());
-        }
+    };
+    Game.prototype.onGameStatusMessage = function (message) {
     };
     Game.prototype.onConnectionError = function (e) {
         alert("Connection error! Is the server down?");
@@ -251,7 +259,28 @@ var Game = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
 
-},{"../common/messages/MessageTypes":24,"./Connection":1,"./LoginManager":3,"./interface/AttachInfo":4,"./interface/InputManager":6,"./interface/InterfaceElement":7,"./interface/TextElement":9,"./interface/prefabs/MainMenu":11,"./sound/SoundAssets":13,"./sound/SoundManager":14,"./textures/TextureLoader":16,"./textures/TextureWorker":17,"./util/Log":19}],3:[function(require,module,exports){
+},{"../common/messages/MessageTypes":25,"./Connection":1,"./GameView":3,"./LoginManager":4,"./interface/AttachInfo":5,"./interface/InputManager":7,"./interface/InterfaceElement":8,"./interface/TextElement":10,"./interface/prefabs/MainMenu":12,"./sound/SoundAssets":14,"./sound/SoundManager":15,"./textures/TextureLoader":17,"./textures/TextureWorker":18,"./util/Log":20}],3:[function(require,module,exports){
+"use strict";
+var GameView = (function () {
+    function GameView() {
+        this._frame = -1;
+        this._frameInterval = 10;
+        this._firstFrameNumber = -1;
+    }
+    GameView.prototype.init = function (currentFrame, frameInterval) {
+        this._frame = currentFrame;
+        this._firstFrameNumber = currentFrame;
+        this._frameInterval = frameInterval;
+        this._firstFrameTime = Date.now();
+    };
+    GameView.prototype.update = function () {
+    };
+    return GameView;
+}());
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = GameView;
+
+},{}],4:[function(require,module,exports){
 "use strict";
 var Util = require('../common/Util');
 var MessageTypes = require('../common/messages/MessageTypes');
@@ -323,7 +352,7 @@ var LoginManager = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginManager;
 
-},{"../common/Util":21,"../common/messages/MessageTypes":24,"./Game":2}],4:[function(require,module,exports){
+},{"../common/Util":22,"../common/messages/MessageTypes":25,"./Game":2}],5:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
 var AttachInfo = (function () {
@@ -349,7 +378,7 @@ var AttachInfo = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AttachInfo;
 
-},{"../../common/Vector2D":22}],5:[function(require,module,exports){
+},{"../../common/Vector2D":23}],6:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -482,7 +511,7 @@ var ElementList = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ElementList;
 
-},{"./InterfaceElement":7}],6:[function(require,module,exports){
+},{"./InterfaceElement":8}],7:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
 var Game_1 = require('../Game');
@@ -642,7 +671,7 @@ var InputManager = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InputManager;
 
-},{"../../common/Vector2D":22,"../Game":2}],7:[function(require,module,exports){
+},{"../../common/Vector2D":23,"../Game":2}],8:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require('../../common/Vector2D');
 var InputManager_1 = require('./InputManager');
@@ -928,7 +957,7 @@ var InterfaceElement = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceElement;
 
-},{"../../common/Vector2D":22,"../Game":2,"./InputManager":6}],8:[function(require,module,exports){
+},{"../../common/Vector2D":23,"../Game":2,"./InputManager":7}],9:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -983,7 +1012,7 @@ var Panel = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Panel;
 
-},{"../textures/TextureGenerator":15,"./InterfaceElement":7}],9:[function(require,module,exports){
+},{"../textures/TextureGenerator":16,"./InterfaceElement":8}],10:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1035,7 +1064,7 @@ var TextElement = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextElement;
 
-},{"./InterfaceElement":7}],10:[function(require,module,exports){
+},{"./InterfaceElement":8}],11:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1070,7 +1099,7 @@ var LoginMenu = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginMenu;
 
-},{"../AttachInfo":4,"../ElementList":5,"../InterfaceElement":7,"../Panel":8,"../TextElement":9}],11:[function(require,module,exports){
+},{"../AttachInfo":5,"../ElementList":6,"../InterfaceElement":8,"../Panel":9,"../TextElement":10}],12:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1115,14 +1144,14 @@ var MainMenu = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MainMenu;
 
-},{"../../util/Log":19,"../AttachInfo":4,"../InterfaceElement":7,"./LoginMenu":10}],12:[function(require,module,exports){
+},{"../../util/Log":20,"../AttachInfo":5,"../InterfaceElement":8,"./LoginMenu":11}],13:[function(require,module,exports){
 "use strict";
 var Game_1 = require('./Game');
 var viewDiv = document.getElementById("viewDiv");
 var game = new Game_1.default(viewDiv);
 game.init();
 
-},{"./Game":2}],13:[function(require,module,exports){
+},{"./Game":2}],14:[function(require,module,exports){
 "use strict";
 exports.mainMenuMusic = [
     ["music/fortress", "sound/music/fortress.ogg"]
@@ -1133,7 +1162,7 @@ exports.interfaceSounds = [
     ["ui/nope", "sound/ui/nope.ogg"]
 ];
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 var SoundLoadRequest = (function () {
     function SoundLoadRequest(name, list, onComplete, onProgress) {
@@ -1225,7 +1254,7 @@ var SoundManager = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = SoundManager;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 "use strict";
 var Game_1 = require('../Game');
 function simpleRectangle(target, width, height, color, borderWidth, borderColor) {
@@ -1243,7 +1272,7 @@ function simpleRectangle(target, width, height, color, borderWidth, borderColor)
 }
 exports.simpleRectangle = simpleRectangle;
 
-},{"../Game":2}],16:[function(require,module,exports){
+},{"../Game":2}],17:[function(require,module,exports){
 "use strict";
 var TextureLoader = (function () {
     function TextureLoader(sheetName, mapName, callback) {
@@ -1303,7 +1332,7 @@ var TextureLoader = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureLoader;
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 "use strict";
 var ColorUtil = require('../util/ColorUtil');
 var TextureWorker = (function () {
@@ -1431,7 +1460,7 @@ var TextureWorker = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureWorker;
 
-},{"../util/ColorUtil":18}],18:[function(require,module,exports){
+},{"../util/ColorUtil":19}],19:[function(require,module,exports){
 "use strict";
 function rgbToNumber(r, g, b) {
     return (r << 16) + (g << 8) + b;
@@ -1453,7 +1482,7 @@ function rgbaString(r, g, b, a) {
 }
 exports.rgbaString = rgbaString;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 var types = {};
 var LogType = (function () {
@@ -1485,7 +1514,7 @@ function log(typeName, msg) {
 }
 exports.log = log;
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 "use strict";
 var IDPool = (function () {
     function IDPool(alphabet) {
@@ -1545,7 +1574,7 @@ var IDPool = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = IDPool;
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 "use strict";
 function noop() { }
 exports.noop = noop;
@@ -1598,7 +1627,7 @@ function isCoordinate(x) {
 }
 exports.isCoordinate = isCoordinate;
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 var Vector2D = (function () {
     function Vector2D(x, y) {
@@ -1685,7 +1714,7 @@ var Vector2D = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Vector2D;
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 var IDPool_1 = require('../IDPool');
 var Vector2D_1 = require('../Vector2D');
@@ -1840,7 +1869,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Message;
 var MessageTypes = require('./MessageTypes');
 
-},{"../IDPool":20,"../Util":21,"../Vector2D":22,"./MessageTypes":24}],24:[function(require,module,exports){
+},{"../IDPool":21,"../Util":22,"../Vector2D":23,"./MessageTypes":25}],25:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -2015,4 +2044,4 @@ var GameStatus = (function (_super) {
 exports.GameStatus = GameStatus;
 classesByType[exports.GAME_STATUS] = GameStatus;
 
-},{"../Util":21,"./Message":23}]},{},[12]);
+},{"../Util":22,"./Message":24}]},{},[13]);

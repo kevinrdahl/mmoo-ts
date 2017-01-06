@@ -95,8 +95,12 @@ export default class Game {
 		this.render();
 	}
 
+	//actually seeing the game world will be relegated to ENTERING the game
+	//joining a game lets you manager characters before entering
 	public onJoinGame(gameId:number) {
 		this.joinedGameId = gameId;
+
+		//this.gameView.init(currentFrame, frameInterval);
 	}
 
 	private render() {
@@ -159,7 +163,7 @@ export default class Game {
 	}
 
 	private onGameStatusMessage(message:MessageTypes.GameStatus) {
-		
+
 	}
 
 	private onConnectionError(e:Event) {
