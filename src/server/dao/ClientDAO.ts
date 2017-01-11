@@ -11,7 +11,6 @@ import * as Crypto from '../util/Crypto';
 
 export default class ClientDAO {
 	protected _operationQueue:Array<DAOOperation> = [];
-	protected _user:User;
 	protected _mySQLPool:any;
 	//protected _db:mongodb.Db;
 
@@ -41,6 +40,14 @@ export default class ClientDAO {
 				this.enqueueOperation(createOperation);
 			}
 		});
+	}
+
+	/**
+	 * Gets summaries of a player's characters
+	 */
+	public getCharacterList(userId:number, gameId:number, callback:(operation:DAOOperation)=>void) {
+		var operation:DAOOperation = new DAOOperation("getCharacterList", {userId:userId, gameId:gameId}, callback);
+		this.enqueueOperation(operation);
 	}
 
 	protected enqueueOperation(operation:DAOOperation) {

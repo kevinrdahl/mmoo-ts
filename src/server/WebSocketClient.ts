@@ -130,6 +130,11 @@ export default class WebSocketClient {
 				}
 				break;
 
+			case "getCharacters":
+				if (Util.isInt(params['gameId']) && this._user != null) {
+					handled = true;
+				}
+
 			case "joinGame":
 				if (Util.isInt(params['gameId'])) {
 					handled = true;
