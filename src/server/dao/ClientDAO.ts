@@ -9,6 +9,16 @@ import DAOOperation from './DAOOperation';
 import User from '../user/User';
 import * as Crypto from '../util/Crypto';
 
+/**
+ * This is the only path by which a client's request should turn into a database query.
+ * It maintains a queue of operations and will only process one at a time.
+ * 
+ * TODO: also limit the frequency of requests
+ * 
+ * It is by no means a good format for a general-purpose DAO. For general game data, a
+ * better scheme should be employed. (Boring, put it off)
+ * 		Actually, this will probably just have to be rewritten to use whatever ORM thing I pick
+ */
 export default class ClientDAO {
 	protected _operationQueue:Array<DAOOperation> = [];
 	protected _mySQLPool:any;
@@ -43,10 +53,26 @@ export default class ClientDAO {
 	}
 
 	/**
-	 * Gets summaries of a player's characters
+	 * Gets summaries of a player's characters. Not full data.
 	 */
 	public getCharacterList(userId:number, gameId:number, callback:(operation:DAOOperation)=>void) {
-		var operation:DAOOperation = new DAOOperation("getCharacterList", {userId:userId, gameId:gameId}, callback);
+		var operation:DAOOperation = new DAOOperation(
+			"getCharacterList",
+			{userId:userId, gameId:gameId},
+			callback
+		);
+		this.enqueueOperation(operation);
+	}
+
+	/**
+	 * Note you'll have to check that the client is actually allowed to access this.
+	 */
+	public getCharacter(characterId:number, callback:(operation:DAOOperation)=>void) {
+		var operation:DAOOperation = new DAOOperation(
+			"getCharacter",
+			{characterId:characterId},
+			callback
+		);
 		this.enqueueOperation(operation);
 	}
 
@@ -89,52 +115,66 @@ export default class ClientDAO {
 					{'name': user.name, 'password': user.pass},
 					this.onQueryResult
 				);
-				//this._db.collection('users').insertOne(user.toDoc, this.onQueryResult);
+				break;
+				
+			case "getCharacterList":
+				//TEMP! TODO: return less data
+				this._mySQLPool.query(
+					'SELECT * FROM `Character` WHERE `user_id`=? AND `game_id`=?',
+					[operation.data.userId, operation.data.gameId],
+					this.onQueryResult
+				);
+				break;
 		}
 	}
 
 	protected onQueryResult = (err, rows) => {
-		if (err) {
-			console.error("Database error: " + err);
-			return;
-		}
-
-		//console.log("Query response:\n   " + JSON.stringify(rows));
-
 		var operation = this._operationQueue.shift();
 
-		//if (operation) console.log("Operation data:\n   " + JSON.stringify(operation.data));
-		//else console.log("No operation!");
+		if (err) {
+			var dbErr:string = "Database error: " + err;
+			console.error(dbErr);
+			operation.success = false;
+			operation.failReason = dbErr;
+		}
+		else {
+			switch (operation.type) {
+				case "checkIfUserExists":
+					operation.success = true; //no such thing as a wrong question!
+					operation.result = rows.length;
+					break;
 
-		switch (operation.type) {
-			case "checkIfUserExists":
-				operation.success = true; //no such thing as a wrong question!
-				operation.result = rows.length;
-				break;
-
-			case "login":
-				if (rows.length == 1) {
-					var entry = rows[0];
-					//if (operation.data.pass == entry.pass) {
-					if (Crypto.checkPassword(operation.data.pass, entry.password)) {
-						operation.success = true;
-						operation.result = new User(entry);
-					} else {
-						operation.failReason = "Incorrect password.";
+				case "login":
+					if (rows.length == 1) {
+						var entry = rows[0];
+						//if (operation.data.pass == entry.pass) {
+						if (Crypto.checkPassword(operation.data.pass, entry.password)) {
+							operation.success = true;
+							operation.result = new User(entry);
+						} else {
+							operation.failReason = "Incorrect password.";
+						}
+					} else if (rows.length == 0) {
+						operation.failReason = "User '" + operation.data.name + "' does not exist.";
+					} else if (rows.length > 1) {
+						operation.failReason = "Multiple records found! This shouldn't be happening...";
 					}
-				} else if (rows.length == 0) {
-					operation.failReason = "User '" + operation.data.name + "' does not exist.";
-				} else if (rows.length > 1) {
-					operation.failReason = "Multiple records found! This shouldn't be happening...";
-				}
-				break;
+					break;
 
-			case "createUser":
-				operation.success = true;
-				break;
+				case "createUser":
+					//the call is only made if we know the user doesn't exist
+					//the User object is made/set in performOperation
+					operation.success = true;
+					break;
 
-			default:
-				operation.failReason = "Internal error: unknown DB operation type '" + operation.type + "'";
+				case "getCharacterList":
+					operation.success = true;
+					operation.result = rows; //NO NO BAD, PROCESS THIS
+					break;
+
+				default:
+					operation.failReason = "Internal error: unknown DB operation type '" + operation.type + "'";
+			}
 		}
 
 		operation.callback(operation);

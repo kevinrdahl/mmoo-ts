@@ -217,4 +217,20 @@ export default class WebSocketClient {
 		var msg:Message = new MessageTypes.UserMessage(operation.type, params);
 		this.sendMessage(msg);
 	}
+
+	protected onGetCharacterList = (operation:DAOOperation) => {
+		var params = {
+			success:operation.success,
+			worldId:operation.data.worldId
+		};
+
+		if (operation.success) {
+			params['characters'] = operation.result;
+		} else {
+			params['failReason'] = operation.failReason;
+		}
+
+		var msg:Message = new MessageTypes.UserMessage(operation.type, params);
+		this.sendMessage(msg);
+	}
 }
