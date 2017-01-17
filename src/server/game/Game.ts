@@ -16,7 +16,7 @@ export default class Game {
 	protected _pendingPlayers:PlayerGroup = new PlayerGroup(); //these players have only joined
 
 	//TODO: variable simulation rate
-	protected _updateInterval:number = Math.ceil(1000 / 15); //update at ~15fps
+	protected _updateInterval:number = Math.round(1000 / 15); //update at ~15fps
 	protected _currentUpdateTime:number = 0; //set at the beginning of update loop
 	protected _nextUpdateTime:number = 0; //ditto
 	protected _firstUpdateTime:number = -1; //for stats or something

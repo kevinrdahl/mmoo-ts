@@ -13,6 +13,7 @@ let mysql = require('mysql');
 
 import WebSocketClient from './WebSocketClient';
 import FunctionQueue from '../common/FunctionQueue';
+import ORM from './ORM';
 
 /**
  * Base server class. Gets everything running, but should be extended
@@ -27,6 +28,7 @@ export default class BaseServer {
 	protected _mongoClient:mongodb.MongoClient = mongodb.MongoClient;
 	protected _mongo:mongodb.Db;
 	protected _mysqlPool;
+	protected _orm;
 
 	protected _wsClients:Object = {};
 	protected _allowedDAOOperations:Object = {};
@@ -37,6 +39,7 @@ export default class BaseServer {
 	get name():string { return this._settings.server.name; }
 	get mongo():mongodb.Db { return this._mongo; }
 	get mySQLPool():any { return this._mysqlPool; }
+	get ORM():any { return this._orm; }
 
 	constructor (settingsPath:string) {
 		this._settingsPath = settingsPath;
@@ -73,14 +76,17 @@ export default class BaseServer {
 		var s:string = data.toString();
 		try {
 			this._settings = YAML.parse(s);
-			this.onSettingsLoadedSuccess();
 		} catch (e) {
 			console.error("Failed to parse settings YAML");
 			console.log(e);
+			return;
 		}
+
+		this.onSettingsLoadedSuccess();
 	}
 
 	protected onSettingsLoadedSuccess() {
+		this.initORM();
 		this.initMySQLPool();
 		this.initWebSocketServer();
 		this.initHttpServer();
@@ -91,6 +97,10 @@ export default class BaseServer {
 	////////////////////////////////////////
 	// MySQL
 	////////////////////////////////////////
+	protected initORM() {
+		this._orm = new ORM(this._settings.mysql);
+	}
+
 	protected initMySQLPool() {
 		this._mysqlPool = mysql.createPool({
 			connectionLimit	: this._settings.mysql.connections,

@@ -51,7 +51,7 @@ export default class WebSocketClient {
 		socket.on("message", this._onMessage);
 
 		this._server = server;
-		this._dao = new ClientDAO(server.mySQLPool);
+		this._dao = new ClientDAO(server.mySQLPool, server.ORM);
 	}
 
 	public send(msg:string) {

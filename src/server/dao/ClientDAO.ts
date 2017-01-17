@@ -8,13 +8,14 @@ let mysql = require('mysql');
 import DAOOperation from './DAOOperation';
 import User from '../user/User';
 import * as Crypto from '../util/Crypto';
+import ORM from '../ORM';
 
 /**
  * This is the only path by which a client's request should turn into a database query.
  * It maintains a queue of operations and will only process one at a time.
- * 
+ *
  * TODO: also limit the frequency of requests
- * 
+ *
  * It is by no means a good format for a general-purpose DAO. For general game data, a
  * better scheme should be employed. (Boring, put it off)
  * 		Actually, this will probably just have to be rewritten to use whatever ORM thing I pick
@@ -22,10 +23,12 @@ import * as Crypto from '../util/Crypto';
 export default class ClientDAO {
 	protected _operationQueue:Array<DAOOperation> = [];
 	protected _mySQLPool:any;
+	protected _orm:ORM;
 	//protected _db:mongodb.Db;
 
-	constructor(mySQLPool:any) {
+	constructor(mySQLPool:any, orm:ORM) {
 		this._mySQLPool = mySQLPool;
+		this._orm = orm;
 	}
 
 	public checkIfUserExists(name:string, callback:(operation:DAOOperation)=>void) {
@@ -85,26 +88,51 @@ export default class ClientDAO {
 
 	protected performOperation() {
 		var operation = this._operationQueue[0];
+		var orm:ORM = this._orm;
+		var __this = this;
+
 		switch (operation.type) {
 			case "checkIfUserExists":
-				this._mySQLPool.query(
+				/*this._mySQLPool.query(
 					'SELECT 1 FROM `User` WHERE `name`=?',
 					[operation.data.name],
 					this.onQueryResult
-				);
+				);*/
+
+				orm.User.findAll({
+					where: {
+						name: operation.data.name
+					}
+				}).then(function(rows) {
+					__this.onQueryResult(null, rows);
+				}).catch(function(e) {
+					__this.onQueryResult(e, null);
+				});
+
 				break;
 
 			case "login":
-				this._mySQLPool.query(
+				/*this._mySQLPool.query(
 					'SELECT * FROM `User` WHERE `name`=?',
 					[operation.data.name],
 					this.onQueryResult
-				);
+				);*/
+
+				orm.User.findAll({
+					where: {
+						name: operation.data.name
+					}
+				}).then(function(rows) {
+					__this.onQueryResult(null, rows);
+				}).catch(function(e) {
+					__this.onQueryResult(e, null);
+				});
+
 				break;
 
 			//note: if this is called, it has already been checked that no user with that name exists
 			case "createUser":
-				var user:User = new User();
+				/*var user:User = new User();
 				user.name = operation.data.name;
 				user.password = Crypto.hashPassword(operation.data.pass);
 
@@ -114,21 +142,44 @@ export default class ClientDAO {
 					'INSERT INTO `User` SET ?',
 					{'name': user.name, 'password': user.pass},
 					this.onQueryResult
-				);
+				);*/
+				var user = orm.User.build({
+					name: operation.data.name,
+					password: Crypto.hashPassword(operation.data.pass)
+				});
+
+				user.save().then(function(instance) {
+					__this.onQueryResult(null, instance);
+				}).catch(function(e) {
+					__this.onQueryResult(e, null);
+				});
+
 				break;
-				
+
 			case "getCharacterList":
 				//TEMP! TODO: return less data
-				this._mySQLPool.query(
+				/*this._mySQLPool.query(
 					'SELECT * FROM `Character` WHERE `user_id`=? AND `game_id`=?',
 					[operation.data.userId, operation.data.gameId],
 					this.onQueryResult
-				);
+				);*/
+
+				orm.Character.findAll({
+					where: {
+						userId: operation.data.userId,
+						gameId: operation.data.gameId
+					}
+				}).then(function(rows) {
+					__this.onQueryResult(null, rows);
+				}).catch(function(e) {
+					__this.onQueryResult(e, null);
+				});
+
 				break;
 		}
 	}
 
-	protected onQueryResult = (err, rows) => {
+	protected onQueryResult (err, result) {
 		var operation = this._operationQueue.shift();
 
 		if (err) {
@@ -141,12 +192,12 @@ export default class ClientDAO {
 			switch (operation.type) {
 				case "checkIfUserExists":
 					operation.success = true; //no such thing as a wrong question!
-					operation.result = rows.length;
+					operation.result = result.length;
 					break;
 
 				case "login":
-					if (rows.length == 1) {
-						var entry = rows[0];
+					if (result.length == 1) {
+						var entry = result[0];
 						//if (operation.data.pass == entry.pass) {
 						if (Crypto.checkPassword(operation.data.pass, entry.password)) {
 							operation.success = true;
@@ -154,22 +205,27 @@ export default class ClientDAO {
 						} else {
 							operation.failReason = "Incorrect password.";
 						}
-					} else if (rows.length == 0) {
+					} else if (result.length == 0) {
 						operation.failReason = "User '" + operation.data.name + "' does not exist.";
-					} else if (rows.length > 1) {
+					} else if (result.length > 1) {
 						operation.failReason = "Multiple records found! This shouldn't be happening...";
 					}
 					break;
 
 				case "createUser":
 					//the call is only made if we know the user doesn't exist
-					//the User object is made/set in performOperation
 					operation.success = true;
+					operation.result = result; //an instance of orm.User
 					break;
 
 				case "getCharacterList":
 					operation.success = true;
-					operation.result = rows; //NO NO BAD, PROCESS THIS
+					operation.result = result.map(function(char) {
+						return {
+							name: char.name,
+							properties: char.properties
+						}
+					});
 					break;
 
 				default:
