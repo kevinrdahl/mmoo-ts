@@ -13,7 +13,10 @@ export const USER = 10; //login, create account, character operations
 export const CRYPTO = 11; //wraps some other message
 export const GET_REQUEST = 12; //general-purpose info retrieval (eg rsa key)
 export const GET_RESPONSE = 13;
-export const GAME_STATUS = 14;
+export const GAME_JOINED = 14; //also contains information about the game's state
+export const GAME_LEFT = 15;
+export const ROOM_JOINED = 16;
+export const ROOM_LEFT = 17;
 
 /**
  * Giving everything its own class makes things neat and happy. Probably.
@@ -162,27 +165,28 @@ export class GetResponse extends Message {
 classesByType[GET_RESPONSE] = GetResponse;
 
 /**
- * Reports a Game's current frame and simulation speed
+ * User has joined the Game
+ * Reports the Game's current frame and simulation speed
  */
-export class GameStatus extends Message {
+export class GameJoined extends Message {
 	public gameId:number;
 	public frame:number;
 	public frameInterval:number;
 
 	constructor(gameId:number, frame:number, frameInterval:number) {
-		super(GAME_STATUS);
+		super(GAME_JOINED);
 		this.gameId = gameId;
 		this.frame = frame;
 		this.frameInterval = frameInterval;
 	}
 
-	public static fromArgs(args:Array<any>):GameStatus {
+	public static fromArgs(args:Array<any>):GameJoined {
 		if (
 			Util.isInt(args[0])
 			&& Util.isInt(args[1])
 			&& Util.isNumber(args[2])
 			) {
-			return new GameStatus(args[0], args[1], args[2]);
+			return new GameJoined(args[0], args[1], args[2]);
 		}
 		return null;
 	}
@@ -193,4 +197,84 @@ export class GameStatus extends Message {
 		return s;
 	}
 }
-classesByType[GAME_STATUS] = GameStatus;
+classesByType[GAME_JOINED] = GameJoined;
+
+/**
+ * User has left the Game
+ */
+export class GameLeft extends Message {
+	public gameId:number;
+	public reason:string;
+
+	constructor(gameId:number, reason:string) {
+		super(GAME_LEFT);
+		this.gameId = gameId;
+		this.reason = reason;
+	}
+
+	public static fromArgs(args:Array<any>):GameLeft {
+		if (Util.isInt(args[0]) && Util.isString(args[1])) {
+			return new GameLeft(args[0], args[1]);
+		}
+		return null;
+	}
+
+	public serialize():string {
+		var s = super.serialize();
+		s += JSON.stringify([this.gameId, this.reason]);
+		return s;
+	}
+}
+classesByType[GAME_LEFT] = GameLeft;
+
+/**
+ * Player sees a Room. Might need to say more later, hence its own type.
+ */
+export class RoomJoined extends Message {
+	public roomId:number;
+
+	constructor(gameId:number) {
+		super(ROOM_JOINED);
+		this.roomId = gameId;
+	}
+
+	public static fromArgs(args:Array<any>):RoomJoined {
+		if (Util.isInt(args[0])) {
+			return new RoomJoined(args[0]);
+		}
+		return null;
+	}
+
+	public serialize():string {
+		var s = super.serialize();
+		s += JSON.stringify([this.roomId]);
+		return s;
+	}
+}
+classesByType[ROOM_JOINED] = RoomJoined;
+
+/**
+ * Player doesn't see this Room anymore
+ */
+export class RoomLeft extends Message {
+	public roomId:number;
+
+	constructor(gameId:number) {
+		super(ROOM_LEFT);
+		this.roomId = gameId;
+	}
+
+	public static fromArgs(args:Array<any>):RoomLeft {
+		if (Util.isInt(args[0])) {
+			return new RoomLeft(args[0]);
+		}
+		return null;
+	}
+
+	public serialize():string {
+		var s = super.serialize();
+		s += JSON.stringify([this.roomId]);
+		return s;
+	}
+}
+classesByType[ROOM_LEFT] = RoomLeft;

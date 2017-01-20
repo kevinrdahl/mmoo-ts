@@ -195,7 +195,7 @@ var Game = (function () {
             case MessageTypes.USER:
                 this.loginManager.onUserMessage(message);
                 break;
-            case MessageTypes.GAME_STATUS:
+            case MessageTypes.GAME_JOINED:
                 this.onGameStatusMessage(message);
                 break;
             default:
@@ -1883,7 +1883,10 @@ exports.USER = 10;
 exports.CRYPTO = 11;
 exports.GET_REQUEST = 12;
 exports.GET_RESPONSE = 13;
-exports.GAME_STATUS = 14;
+exports.GAME_JOINED = 14;
+exports.GAME_LEFT = 15;
+exports.ROOM_JOINED = 16;
+exports.ROOM_LEFT = 17;
 var classesByType = [];
 function getClassByType(type) {
     var c = classesByType[type];
@@ -2018,30 +2021,30 @@ var GetResponse = (function (_super) {
 }(Message_1.default));
 exports.GetResponse = GetResponse;
 classesByType[exports.GET_RESPONSE] = GetResponse;
-var GameStatus = (function (_super) {
-    __extends(GameStatus, _super);
-    function GameStatus(gameId, frame, frameInterval) {
-        _super.call(this, exports.GAME_STATUS);
+var GameJoined = (function (_super) {
+    __extends(GameJoined, _super);
+    function GameJoined(gameId, frame, frameInterval) {
+        _super.call(this, exports.GAME_JOINED);
         this.gameId = gameId;
         this.frame = frame;
         this.frameInterval = frameInterval;
     }
-    GameStatus.fromArgs = function (args) {
+    GameJoined.fromArgs = function (args) {
         if (Util.isInt(args[0])
             && Util.isInt(args[1])
             && Util.isNumber(args[2])) {
-            return new GameStatus(args[0], args[1], args[2]);
+            return new GameJoined(args[0], args[1], args[2]);
         }
         return null;
     };
-    GameStatus.prototype.serialize = function () {
+    GameJoined.prototype.serialize = function () {
         var s = _super.prototype.serialize.call(this);
         s += JSON.stringify([this.gameId, this.frame, this.frameInterval]);
         return s;
     };
-    return GameStatus;
+    return GameJoined;
 }(Message_1.default));
-exports.GameStatus = GameStatus;
-classesByType[exports.GAME_STATUS] = GameStatus;
+exports.GameJoined = GameJoined;
+classesByType[exports.GAME_JOINED] = GameJoined;
 
 },{"../Util":22,"./Message":24}]},{},[13]);

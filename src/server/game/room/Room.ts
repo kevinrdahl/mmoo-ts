@@ -1,5 +1,6 @@
 import GenericManager from '../GenericManager';
 import Player from '../Player';
+import PlayerGroup from '../PlayerGroup';
 import TerrainManager from './TerrainManager';
 import Game from '../Game';
 
@@ -13,8 +14,7 @@ export default class Room extends GenericManager {
 	protected static _idNum:number = 0;
 
 	protected _id:number = -1;
-	protected _subscribedPlayers:Array<Player> = [];
-	protected _subscribedPlayersById:Object = {};
+	protected _subscribedPlayers:PlayerGroup = new PlayerGroup();
 
 	protected _game:Game;
 	protected _terrainManager:TerrainManager;
@@ -41,43 +41,24 @@ export default class Room extends GenericManager {
 		//console.log(this.name + ": update " + timeElapsed);
 	}
 
-	public subscribePlayer(player:Player) {
+	protected subscribePlayer(player:Player) {
 		if (!player.user) {
 			this.log("player has no user. Not subscribing them.");
 			return;
 		}
 
-		if (this._subscribedPlayersById[player.userId])
-		{
-			this.log("Player " + player.userId + " is already subscribed.");
-			return;
+		var changed:boolean = this._subscribedPlayers.addPlayer(player);
+		if (changed) {
+			player.onSubscribeToRoom(this);
 		}
-
-		this._subscribedPlayers.push(player);
-		this._subscribedPlayersById[player.userId] = player;
-
-		player.subscribedRooms.push(this);
-
-		//TODO: tell the player about this room (seeing entities should be handled gracefully by the vision handler)
 	}
 
-	public unsubscribePlayer(player:Player) {
-		if (!this._subscribedPlayersById[player.userId])
-		{
-			this.log("Player " + player.userId + " wasn't subscribed.");
-			return;
+	protected unsubscribePlayer(player:Player) {
+		var changed:boolean = this._subscribedPlayers.removePlayer(player);
+
+		if (changed) {
+			player.onSubscribeToRoom(this);
 		}
-
-		var index:number = this._subscribedPlayers.indexOf(player);
-		this._subscribedPlayers.splice(index, 1);
-		delete this._subscribedPlayersById[player.userId];
-
-		index = player.subscribedRooms.indexOf(this);
-		if (index >= 0) {
-			player.subscribedRooms.splice(index, 1);
-		}
-
-		//TODO: tell the player they can't see this room anymore (should be super simple and handled in detail by the client)
 	}
 
 	protected log(message:string) {

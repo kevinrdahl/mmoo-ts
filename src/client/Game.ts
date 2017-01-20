@@ -153,8 +153,8 @@ export default class Game {
 				this.loginManager.onUserMessage(message as MessageTypes.UserMessage);
 				break;
 
-			case MessageTypes.GAME_STATUS:
-				this.onGameStatusMessage(message as MessageTypes.GameStatus);
+			case MessageTypes.GAME_JOINED:
+				this.onGameStatusMessage(message as MessageTypes.GameJoined);
 				break;
 
 			default:
@@ -162,7 +162,7 @@ export default class Game {
 		}
 	}
 
-	private onGameStatusMessage(message:MessageTypes.GameStatus) {
+	private onGameStatusMessage(message:MessageTypes.GameJoined) {
 
 	}
 

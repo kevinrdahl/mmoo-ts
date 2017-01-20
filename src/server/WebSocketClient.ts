@@ -10,8 +10,8 @@ import * as WebSocket from 'ws';
 import BaseServer from './BaseServer';
 import GameServer from './GameServer';
 import Game from './game/Game';
-import User from './user/User';
 import Player from './game/Player';
+import Character from './game/character/Character';
 import ClientDAO from './dao/ClientDAO';
 import DAOOperation from './dao/DAOOperation';
 import Message from '../common/messages/Message';
@@ -36,22 +36,28 @@ export default class WebSocketClient {
 	protected _socket:WebSocket;
 	protected _server:BaseServer;
 	protected _dao:ClientDAO;
-	protected _user:User = null;
+	protected _user:any = null;
+	protected _connected:boolean = false;
 
 	get id():string { return this._id; }
 	get server():BaseServer { return this._server; }
-	get user():User { return this._user; }
+	get user():any { return this._user; }
+	get loggedIn():boolean { return this._user != null; }
+	get inGame():boolean { return this.loggedIn && this.player != null; }
+	get onGameServer():boolean { return this._server instanceof GameServer; }
+	get connected():boolean { return this._connected; }
 
 	constructor(socket:WebSocket, server:BaseServer) {
 		this._id = WebSocketClient._idNum.toString();
 		WebSocketClient._idNum++;
 
 		this._socket = socket;
+		this._connected = true;
 		socket.on("close", this._onDisconnect);
 		socket.on("message", this._onMessage);
 
 		this._server = server;
-		this._dao = new ClientDAO(server.mySQLPool, server.ORM);
+		this._dao = new ClientDAO(server.ORM);
 	}
 
 	public send(msg:string) {
@@ -98,6 +104,7 @@ export default class WebSocketClient {
 	};
 
 	protected _onDisconnect = () => {
+		this._connected = false;
 		this.onDisconnect(this);
 	};
 
@@ -112,7 +119,7 @@ export default class WebSocketClient {
 
 		switch (msg.action) {
 			case "login":
-				if (Util.isString(params['name']) && Util.isString(params['pass'])) {
+				if (!this.loggedIn && Util.isString(params['name']) && Util.isString(params['pass'])) {
 					handled = true;
 					var name:string = params['name'];
 					var pass:string = params['pass']; //HASH IT DUMMY
@@ -122,7 +129,7 @@ export default class WebSocketClient {
 
 			case "createUser":
 				//for now this looks identical, but TIMES CHANGE
-				if (Util.isString(params['name']) && Util.isString(params['pass'])) {
+				if (!this.loggedIn && Util.isString(params['name']) && Util.isString(params['pass'])) {
 					handled = true;
 					var name:string = params['name'];
 					var pass:string = params['pass']; //DAO does the hash
@@ -131,22 +138,54 @@ export default class WebSocketClient {
 				break;
 
 			case "getCharacters":
-				if (Util.isInt(params['gameId']) && this._user != null) {
+				if (this.loggedIn && !this.player && Util.isInt(params['gameId'])) {
 					handled = true;
+					this._dao.getCharacterList(this.user.id, params['gameId'], this.onGetCharacterList);
 				}
+				break;
 
-			case "joinGame":
-				if (Util.isInt(params['gameId'])) {
+			case "createCharacter":
+				if (
+					Util.isInt(params['gameId'])
+					&& Util.isString(params['name'])
+					&& Util.isObject(params['properties'])
+				) {
 					handled = true;
-					params['success'] = false;
 
-					if (!this._user) {
+					if (!this.loggedIn) {
 						params['failReason'] = "Not logged in.";
 					}
-					else if (this.player) {
+					else if (this.inGame) {
+						params['failReason'] = "Already in a game.";
+					} else if (!this.onGameServer) {
+						params['failReason'] = "Not connected to a game server.";
+					}
+					else {
+						var gameServer:GameServer = this._server as GameServer;
+						var game:Game = gameServer.getGameById(params['gameId']);
+						if (!game) {
+							params['failReason'] = "Game does not exist.";
+						} else if (!game.userCanJoin(this._user)) {
+							params['failReason'] = "Don't have permission to create a character in that world."
+						} else {
+							handled = true;
+							Character.sanitizeCreateCharacterProperties(params['properties']);
+							this._dao.createCharacter(this._user.id, params['worldId'], params['name'], params['properties'], this.onTryCreateCharacter);
+						}
+					}
+				}
+
+			case "enterGame":
+				if (Util.isInt(params['gameId']) && Util.isInt(params['characterId'])) {
+					params['success'] = false;
+
+					if (!this.loggedIn) {
+						params['failReason'] = "Not logged in.";
+					}
+					else if (this.inGame) {
 						params['failReason'] = "Already in a game.";
 					}
-					else if (!(this._server instanceof GameServer)) {
+					else if (!this.onGameServer) {
 						params['failReason'] = "Not connected to a game server.";
 					}
 					else {
@@ -157,21 +196,19 @@ export default class WebSocketClient {
 						} else if (!game.userCanJoin(this._user)) {
 							params['failReason'] = "Don't have permission to join that game."
 						} else {
-							//actually join
-							params['success'] = true;
-							this.sendMessage(msg);
-
-							game.addClientAsPlayer(this);
+							handled = true;
+							this._dao.getCharacter(params['characterId'], this.onGetCharacterToEnterGame);
 						}
 					}
 				}
+				break;
 
 			default:
 				console.log("Unhandled but allowed User Action: " + msg.action);
 
 			if (!handled) {
 				params['success'] = false;
-				params['failReason'] = "Invalid argument type(s)";
+				if (!params.hasOwnProperty("failReason")) params['failReason'] = "Invalid argument type(s) or invalid user state";
 				this.sendMessage(msg);
 			}
 		}
@@ -180,7 +217,7 @@ export default class WebSocketClient {
 	protected onGetRequest(msg:MessageTypes.GetRequest) {
 		var ret:any = false;
 
-		if (msg.subject == "games" && this._server instanceof GameServer) {
+		if (msg.subject == "games" && this.onGameServer && this.loggedIn) {
 			ret = (this._server as GameServer).getGamesSummary();
 		}
 
@@ -218,6 +255,19 @@ export default class WebSocketClient {
 		this.sendMessage(msg);
 	}
 
+	protected onTryCreateCharacter = (operation:DAOOperation) => {
+		var params = {success:operation.success};
+
+		if (operation.success) {
+			params['characterId'] = operation.result.id;
+		} else {
+			params["failReason"] = operation.failReason;
+		}
+
+		var msg:Message = new MessageTypes.UserMessage(operation.type, params);
+		this.sendMessage(msg);
+	}
+
 	protected onGetCharacterList = (operation:DAOOperation) => {
 		var params = {
 			success:operation.success,
@@ -231,6 +281,51 @@ export default class WebSocketClient {
 		}
 
 		var msg:Message = new MessageTypes.UserMessage(operation.type, params);
+		this.sendMessage(msg);
+	}
+
+	protected onGetCharacterToEnterGame = (operation:DAOOperation) => {
+		var params = {
+			success:operation.success,
+			characterId:operation.data.characterId
+		};
+		var msg:Message = new MessageTypes.UserMessage(operation.type, params);
+
+		if (operation.success) {
+			var charData = operation.result;
+			//are you logged in to a game server?
+			if (this.loggedIn && this.onGameServer) {
+				var game:Game = (this.server as GameServer).getGameById(charData.id);
+				//is that character's game on this server?
+				if (game) {
+					//but does it belong to this user?
+					if (this.user.id == charData.userId) {
+						//hurray, you can log in
+						//send the ok message before Game does anything
+						this.sendMessage(msg);
+
+						//if this or any of of your characters is ingame, it is handled by Game
+						game.addClientAsCharacter(this, charData);
+
+						//return so it isn't sent twice
+						return;
+					} else {
+						params.success = false;
+						params['failReason'] = "That's not your character";
+					}
+				} else {
+					params.success = false;
+					params['failReason'] = "Character's world isn't on this server";
+				}
+			} else {
+				params.success = false;
+				params['failReason'] = "Not on a game server";
+			}
+		} else {
+			//operation failed somehow
+			params['failReason'] = operation.failReason;
+		}
+
 		this.sendMessage(msg);
 	}
 }

@@ -9,7 +9,7 @@ export default class PlayerGroup {
     public players:Array<Player> = [];
     public playersById:Object = {};
 
-    public get length():number {
+    public get count():number {
         return this.players.length;
     }
 
@@ -17,19 +17,23 @@ export default class PlayerGroup {
 
     }
 
-    public addPlayer(player:Player) {
-        if (this.playersById.hasOwnProperty(player.id.toString())) return;
+    public addPlayer(player:Player):boolean {
+        if (this.playersById.hasOwnProperty(player.id.toString())) return false;
 
         this.players.push(player);
         this.playersById[player.id.toString()] = player;
+
+        return true;
     }
 
-    public removePlayer(player:Player) {
-        if (!this.playersById.hasOwnProperty(player.id.toString())) return;
+    public removePlayer(player:Player):boolean {
+        if (!this.playersById.hasOwnProperty(player.id.toString())) return false;
 
         var index:number = this.players.indexOf(player);
         this.players.splice(index, 1);
         delete this.playersById[player.id.toString()];
+
+        return true;
     }
 
     public containsPlayer(player:Player):boolean {

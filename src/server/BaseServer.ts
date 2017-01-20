@@ -27,7 +27,6 @@ export default class BaseServer {
 	protected _httpServer:http.Server;
 	protected _mongoClient:mongodb.MongoClient = mongodb.MongoClient;
 	protected _mongo:mongodb.Db;
-	protected _mysqlPool;
 	protected _orm;
 
 	protected _wsClients:Object = {};
@@ -38,7 +37,6 @@ export default class BaseServer {
 	get mongoUser():string { return this._settings.mongo.user; }
 	get name():string { return this._settings.server.name; }
 	get mongo():mongodb.Db { return this._mongo; }
-	get mySQLPool():any { return this._mysqlPool; }
 	get ORM():any { return this._orm; }
 
 	constructor (settingsPath:string) {
@@ -87,7 +85,6 @@ export default class BaseServer {
 
 	protected onSettingsLoadedSuccess() {
 		this.initORM();
-		this.initMySQLPool();
 		this.initWebSocketServer();
 		this.initHttpServer();
 
@@ -99,16 +96,6 @@ export default class BaseServer {
 	////////////////////////////////////////
 	protected initORM() {
 		this._orm = new ORM(this._settings.mysql);
-	}
-
-	protected initMySQLPool() {
-		this._mysqlPool = mysql.createPool({
-			connectionLimit	: this._settings.mysql.connections,
-			host					: this._settings.mysql.host,
-			user					: this._settings.mysql.user,
-			password				: this._settings.mysql.password,
-			database				: this._settings.mysql.database
-		});
 	}
 
 	////////////////////////////////////////
@@ -129,9 +116,12 @@ export default class BaseServer {
 	}
 
 	protected onWebSocketConnect = (webSocket:WebSocket) => {
+		var __this = this;
 		var client:WebSocketClient = new WebSocketClient(webSocket, this);
 		client.onMessage = this.onClientMessage;
-		client.onDisconnect = this.onClientDisconnect;
+		client.onDisconnect = function() {
+			__this.onClientDisconnect;
+		}
 
 		this._wsClients[client.id] = client;
 
@@ -142,7 +132,7 @@ export default class BaseServer {
 		//console.log(client.id + ": " + msg);
 	}
 
-	protected onClientDisconnect = (client:WebSocketClient) => {
+	protected onClientDisconnect(client:WebSocketClient) {
 		delete this._wsClients[client.id];
 
 		console.log("Client " + client.id + " disconnected.");

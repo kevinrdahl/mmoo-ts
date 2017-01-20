@@ -3,6 +3,7 @@
 import * as http from 'http';
 
 import BaseServer from './BaseServer';
+import WebSocketClient from './WebSocketClient';
 import Game from './game/Game';
 
 export default class GameServer extends BaseServer {
@@ -14,10 +15,8 @@ export default class GameServer extends BaseServer {
 	}
 
 	public getGameById(id:number):Game {
-		for (var i = 0; i < this._games.length; i++) {
-			if (this._games[i].id == id) {
-				return this._games[i];
-			}
+		for (var game of this._games) {
+			if (game.id == id) return game;
 		}
 
 		return null;
@@ -30,11 +29,19 @@ export default class GameServer extends BaseServer {
 		}
 	}
 
+	protected onClientDisconnect(client:WebSocketClient) {
+		super.onClientDisconnect(client);
+
+		if (client.player && client.player.game) {
+			client.player.game.onPlayerDisconnect(client.player);
+		}
+	}
+
 	public getGamesSummary():Array<Object> {
 		var list:Array<Object> = [];
 
-		for (var i = 0; i < this._games.length; i++) {
-			list.push(this._games[i].getSummary());
+		for (var game of this._games) {
+			list.push(game.getSummary());
 		}
 
 		return list;

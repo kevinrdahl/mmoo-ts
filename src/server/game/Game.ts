@@ -1,8 +1,9 @@
 import Room from './room/Room';
 import Player from './Player';
 import PlayerGroup from './PlayerGroup';
+import CharacterManager from './character/CharacterManager';
+import Character from './character/Character';
 import WebSocketClient from '../WebSocketClient';
-import User from '../user/User';
 
 import Message from '../../common/messages/Message';
 import * as MessageTypes from '../../common/messages/MessageTypes';
@@ -12,8 +13,9 @@ export default class Game {
 
 	protected _id:number;
 	protected _rooms:Array<Room> = [];
-	protected _players:PlayerGroup = new PlayerGroup(); //these players have ENTERED the game
+	protected _activePlayers:PlayerGroup = new PlayerGroup(); //these players have ENTERED the game
 	protected _pendingPlayers:PlayerGroup = new PlayerGroup(); //these players have only joined
+	protected _characterManager:CharacterManager = new CharacterManager();
 
 	//TODO: variable simulation rate
 	protected _updateInterval:number = Math.round(1000 / 15); //update at ~15fps
@@ -26,6 +28,7 @@ export default class Game {
 	public get name():string { return "Game " + this._id; }
 	public get currentFrame():number { return this._currentFrame; }
 	public get currentTime():number { return this._currentUpdateTime; }
+	public get characterManager():CharacterManager { return this._characterManager; }
 
 	constructor() {
 		this._id = Game._idNum;
@@ -35,7 +38,7 @@ export default class Game {
 	public getSummary():Object {
 		return {
 			id: this._id,
-			numPlayers: this._players.length,
+			numPlayers: this._activePlayers.count,
 			numRooms: this._rooms.length
 		};
 	}
@@ -85,48 +88,111 @@ export default class Game {
 	 */
 	protected doUpdate(timeElapsed:number)
 	{
-		for (var i = 0; i < this._rooms.length; i++)
-		{
-			this._rooms[i].update(timeElapsed);
+		for (var room of this._rooms) {
+			room.update(timeElapsed);
 		}
 	}
 
-	public userCanJoin(user:User):boolean {
+	/**
+	 * Pass a Sequelize Instance of User
+	 */
+	public userCanJoin(user:any):boolean {
 		return true;
 	}
 
-	public addClientAsPlayer(client:WebSocketClient) {
+	/**
+	 * Log the client in as the character defined by the given data.
+	 * Assumes they have permission to be that character.
+	 *
+	 * If any client is playing at that client's user, boot them.
+	 *
+	 * @param characterData	a Sequelize Instance of Character
+	 */
+	public addClientAsCharacter(client:WebSocketClient, characterData:any) {
 		if (!client.user) {
 			console.log(this.name + ": client " + client.id + " has no user. Not adding as a player.");
 		}
 
-		var player:Player = new Player();
+		var player:Player = new Player(this);
 		player.client = client;
 		client.player = player;
 
-		//save this for entering the game
-		//client.sendMessage(new MessageTypes.GameStatus(this._id, this._currentFrame, this._updateInterval));
-
-		this._pendingPlayers.addPlayer(player);
-	}
-
-	//TODO: as character
-	public playerEnterGame(player:Player) {
-		if (this._players.containsPlayer(player)) {
-			console.log(this.name + ": player has already entered the game");
-			return;
+		var currentPlayers:Array<Player> = this.getPlayersByUserId(client.user.id);
+		for (var currentPlayer of currentPlayers) {
+			this.removePlayer(currentPlayer, "Logged in elsewhere");
 		}
 
+		var character:Character = this._characterManager.getCharacterById(characterData.id);
+		if (character) {
+			character.player = player;
+			player.character = character;
+		} else {
+			character = new Character(CharacterData);
+			player.character = character;
+			character.player = player;
+			this.addCharacter(character);
+		}
+
+		client.sendMessage(new MessageTypes.GameJoined(this._id, this._currentFrame, this._updateInterval));
+
+		//TODO: add player to vision handler
+	}
+
+	/**
+	 * Called when the player's WebSocketClient disconnects.
+	 */
+	public onPlayerDisconnect(player:Player) {
+
+	}
+
+	/**
+	 * Adds a character to the world.
+	 */
+	protected addCharacter(character:Character) {
+		this._characterManager.addCharacter(character);
+	}
+
+	/**
+	 * Removes a character from the world.
+	 */
+	protected removeCharacter(character:Character) {
+		this._characterManager.removeCharacter(character);
+	}
+
+	/**
+	 * Gets all players logged in as a character owned by a user.
+	 */
+	public getPlayersByUserId(userId:number):Array<Player> {
+		var ret:Array<Player> = [];
+
+		for (var player of this._activePlayers.players) {
+			if (player.userId == userId) {
+				ret.push(player);
+			}
+		}
+
+		for (var player of this._pendingPlayers.players) {
+			if (player.userId == userId) {
+				ret.push(player);
+			}
+		}
+
+		return ret;
+	}
+
+	public removePlayer(player:Player, reason:string = null) {
+		this._activePlayers.removePlayer(player);
 		this._pendingPlayers.removePlayer(player);
-		this._players.addPlayer(player);
-	}
 
-	public removeClient(client:WebSocketClient) {
-		if (client.player) {
-			this._players.removePlayer(client.player);
-			this._pendingPlayers.removePlayer(client.player);
-			client.player = null;
+		if (player.client && player.client.connected) {
+			//TODO: tell the client they've been removed
+			if (!reason) reason = "Unknown";
+			player.sendMessage(new MessageTypes.GameLeft(this._id, reason));
+
+			player.client.player = null;
 		}
+
+		player.client = null;
 	}
 
 	protected createRoom() {

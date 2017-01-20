@@ -6,19 +6,15 @@
 let mysql = require('mysql');
 
 import DAOOperation from './DAOOperation';
-import User from '../user/User';
 import * as Crypto from '../util/Crypto';
 import ORM from '../ORM';
 
 /**
- * This is the only path by which a client's request should turn into a database query.
- * It maintains a queue of operations and will only process one at a time.
+ * This is generally the only path by which a client's request should turn into a database query.
+ * It maintains a queue of operations and will only process one at a time. This queue is its
+ * reason to exist. Don't use a scheme like this for other data access.
  *
  * TODO: also limit the frequency of requests
- *
- * It is by no means a good format for a general-purpose DAO. For general game data, a
- * better scheme should be employed. (Boring, put it off)
- * 		Actually, this will probably just have to be rewritten to use whatever ORM thing I pick
  */
 export default class ClientDAO {
 	protected _operationQueue:Array<DAOOperation> = [];
@@ -26,10 +22,16 @@ export default class ClientDAO {
 	protected _orm:ORM;
 	//protected _db:mongodb.Db;
 
-	constructor(mySQLPool:any, orm:ORM) {
-		this._mySQLPool = mySQLPool;
+	constructor(orm:ORM) {
 		this._orm = orm;
 	}
+
+
+	//////////////////////////////////////////////////
+	// Initiating functions
+	//////////////////////////////////////////////////
+
+	// === User ===
 
 	public checkIfUserExists(name:string, callback:(operation:DAOOperation)=>void) {
 		var operation:DAOOperation = new DAOOperation("checkIfUserExists", {name:name}, callback);
@@ -55,9 +57,13 @@ export default class ClientDAO {
 		});
 	}
 
-	/**
-	 * Gets summaries of a player's characters. Not full data.
-	 */
+	// === Character ===
+
+	public checkIfCharacterExists(name:string, worldId:number, callback:(operation:DAOOperation)=>void) {
+		var operation:DAOOperation = new DAOOperation("checkIfCharacterExists", {name:name, worldId:worldId}, callback);
+		this.enqueueOperation(operation);
+	}
+
 	public getCharacterList(userId:number, gameId:number, callback:(operation:DAOOperation)=>void) {
 		var operation:DAOOperation = new DAOOperation(
 			"getCharacterList",
@@ -67,9 +73,6 @@ export default class ClientDAO {
 		this.enqueueOperation(operation);
 	}
 
-	/**
-	 * Note you'll have to check that the client is actually allowed to access this.
-	 */
 	public getCharacter(characterId:number, callback:(operation:DAOOperation)=>void) {
 		var operation:DAOOperation = new DAOOperation(
 			"getCharacter",
@@ -78,6 +81,28 @@ export default class ClientDAO {
 		);
 		this.enqueueOperation(operation);
 	}
+
+	public createCharacter(userId:number, worldId:number, name:string, properties:any, callback:(operation:DAOOperation)=>void) {
+		this.checkIfCharacterExists(name, worldId, (operation:DAOOperation) => {
+			if (operation.result > 0) {
+				operation.success = false;
+				operation.failReason = "Character '" + operation.data.name + "' already exists.";
+				callback(operation);
+			} else {
+				var createOperation:DAOOperation = new DAOOperation(
+					"createCharacter",
+					{userId:userId, worldId:worldId, name:name, properties:properties},
+					callback
+				)
+				this.enqueueOperation(createOperation);
+			}
+		});
+	}
+
+
+	//////////////////////////////////////////////////
+	// Handling operations
+	//////////////////////////////////////////////////
 
 	protected enqueueOperation(operation:DAOOperation) {
 		this._operationQueue.push(operation);
@@ -93,18 +118,12 @@ export default class ClientDAO {
 
 		switch (operation.type) {
 			case "checkIfUserExists":
-				/*this._mySQLPool.query(
-					'SELECT 1 FROM `User` WHERE `name`=?',
-					[operation.data.name],
-					this.onQueryResult
-				);*/
-
-				orm.User.findAll({
+				orm.User.count({
 					where: {
 						name: operation.data.name
 					}
-				}).then(function(rows) {
-					__this.onQueryResult(null, rows);
+				}).then(function(count) {
+					__this.onQueryResult(null, count);
 				}).catch(function(e) {
 					__this.onQueryResult(e, null);
 				});
@@ -112,12 +131,6 @@ export default class ClientDAO {
 				break;
 
 			case "login":
-				/*this._mySQLPool.query(
-					'SELECT * FROM `User` WHERE `name`=?',
-					[operation.data.name],
-					this.onQueryResult
-				);*/
-
 				orm.User.findAll({
 					where: {
 						name: operation.data.name
@@ -132,17 +145,6 @@ export default class ClientDAO {
 
 			//note: if this is called, it has already been checked that no user with that name exists
 			case "createUser":
-				/*var user:User = new User();
-				user.name = operation.data.name;
-				user.password = Crypto.hashPassword(operation.data.pass);
-
-				operation.result = user;
-
-				this._mySQLPool.query(
-					'INSERT INTO `User` SET ?',
-					{'name': user.name, 'password': user.pass},
-					this.onQueryResult
-				);*/
 				var user = orm.User.build({
 					name: operation.data.name,
 					password: Crypto.hashPassword(operation.data.pass)
@@ -156,14 +158,21 @@ export default class ClientDAO {
 
 				break;
 
-			case "getCharacterList":
-				//TEMP! TODO: return less data
-				/*this._mySQLPool.query(
-					'SELECT * FROM `Character` WHERE `user_id`=? AND `game_id`=?',
-					[operation.data.userId, operation.data.gameId],
-					this.onQueryResult
-				);*/
+			case "checkIfCharacterExists":
+				orm.Character.count({
+					where: {
+						name: operation.data.name,
+						worldId: operation.data.worldId
+					}
+				}).then(function(count) {
+					__this.onQueryResult(null, count);
+				}).catch(function(e) {
+					__this.onQueryResult(e, null);
+				});
 
+				break;
+
+			case "getCharacterList":
 				orm.Character.findAll({
 					where: {
 						userId: operation.data.userId,
@@ -176,8 +185,39 @@ export default class ClientDAO {
 				});
 
 				break;
+
+			case "createCharacter":
+				var character = orm.Character.build({
+					name: operation.data.name,
+					userId: operation.data.userId,
+					worldId: operation.data.worldId,
+					properties: operation.data.properties
+				});
+
+				character.save().then(function(instance) {
+					__this.onQueryResult(null, instance);
+				}).catch(function(e) {
+					__this.onQueryResult(e, null);
+				});
+
+				break;
+
+			case "getCharacter":
+				orm.Character.findOne({
+					where: {
+						id: operation.data.characterId
+					}
+				}).then(function(instance) {
+					__this.onQueryResult(null, instance);
+				}).catch(function(e) {
+					__this.onQueryResult(e, null);
+				});
 		}
 	}
+
+	//////////////////////////////////////////////////
+	// Result
+	//////////////////////////////////////////////////
 
 	protected onQueryResult (err, result) {
 		var operation = this._operationQueue.shift();
@@ -191,17 +231,18 @@ export default class ClientDAO {
 		else {
 			switch (operation.type) {
 				case "checkIfUserExists":
+				case "checkIfCharacterExists":
 					operation.success = true; //no such thing as a wrong question!
-					operation.result = result.length;
+					operation.result = result;
 					break;
 
 				case "login":
 					if (result.length == 1) {
 						var entry = result[0];
-						//if (operation.data.pass == entry.pass) {
+
 						if (Crypto.checkPassword(operation.data.pass, entry.password)) {
 							operation.success = true;
-							operation.result = new User(entry);
+							operation.result = entry;
 						} else {
 							operation.failReason = "Incorrect password.";
 						}
@@ -212,20 +253,22 @@ export default class ClientDAO {
 					}
 					break;
 
-				case "createUser":
-					//the call is only made if we know the user doesn't exist
-					operation.success = true;
-					operation.result = result; //an instance of orm.User
-					break;
-
 				case "getCharacterList":
 					operation.success = true;
 					operation.result = result.map(function(char) {
 						return {
+							id: char.id,
 							name: char.name,
 							properties: char.properties
 						}
 					});
+					break;
+
+				case "getCharacter":
+				case "createCharacter":
+				case "createUser":
+					operation.success = true;
+					operation.result = result; //either an instance or an array of instances, as logic would indicate
 					break;
 
 				default:
