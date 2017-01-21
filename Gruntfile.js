@@ -36,21 +36,22 @@ module.exports = function(grunt) {
         src: ["src/**/*.ts"],
         outDir: "build",
         options:{
-          target: 'es5'
+          //target: 'es5'
+          target: 'es6'
         }
       }
-    },
+  }/*,
     exec: {
       main: 'browserify -e build/client/main.js -o public/js/mmoo-client.js -t [babelify]',
       worker: 'browserify -e build/client/worker.js -o public/js/mmoo-worker.js -t [babelify]'
-    }
+    }*/
   })
 
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-browserify');
   grunt.loadNpmTasks('grunt-ts');
   grunt.loadNpmTasks('grunt-concurrent');
-  grunt.loadNpmTasks('grunt-exec');
+  //grunt.loadNpmTasks('grunt-exec');
   grunt.registerTask('watch', ['ts', 'browserify:main', 'browserify:worker', 'concurrent:both']);
   grunt.registerTask('build', ['ts', 'browserify:main', 'browserify:worker']);
   grunt.registerTask('default', ['build']);

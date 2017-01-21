@@ -1,11 +1,9 @@
-/// <reference path='../../declarations/node.d.ts' />
-/// <reference path='../../declarations/ws.d.ts' />
-/// <reference path='../../declarations/mongodb.d.ts' />
-/// <reference path='../../declarations/yamljs.d.ts' />
+/// <reference path='../declarations/node.d.ts' />
+/// <reference path='../declarations/ws.d.ts' />
+/// <reference path='../declarations/yamljs.d.ts' />
 
 import * as WebSocket from 'ws';
 import * as http from 'http';
-import * as mongodb from 'mongodb';
 import * as YAML from 'yamljs';
 import * as fs from 'fs';
 
@@ -25,18 +23,12 @@ export default class BaseServer {
 
 	protected _wsServer:WebSocket.Server;
 	protected _httpServer:http.Server;
-	protected _mongoClient:mongodb.MongoClient = mongodb.MongoClient;
-	protected _mongo:mongodb.Db;
 	protected _orm;
 
 	protected _wsClients:Object = {};
 	protected _allowedDAOOperations:Object = {};
 
-	get mongoName():string { return this._settings.mongo.name; }
-	get mongoPort():number { return this._settings.mongo.port; }
-	get mongoUser():string { return this._settings.mongo.user; }
 	get name():string { return this._settings.server.name; }
-	get mongo():mongodb.Db { return this._mongo; }
 	get ORM():any { return this._orm; }
 
 	constructor (settingsPath:string) {

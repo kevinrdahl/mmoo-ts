@@ -1,4 +1,4 @@
-/// <reference path="../../../declarations/pixi.js.d.ts"/>
+/// <reference path="../../declarations/pixi.js.d.ts"/>
 import * as Log from '../util/Log';
 
 export default class TextureLoader {
@@ -6,20 +6,20 @@ export default class TextureLoader {
 	private _map:Object = null;
 	private _textures:Object = {};
 	private _callback:any;
-	
+
 	constructor(sheetName:string, mapName:string, callback) {
 		this._callback = callback;
-		
+
 		var _this:TextureLoader = this;
-		
+
 		PIXI.loader.add("sheet", sheetName);
 		PIXI.loader.load(function(loader, resources) {
 			_this._sheet = resources.sheet.texture.baseTexture;
 			_this.onSheetOrMap();
 		});
-		
+
 		var req = new XMLHttpRequest();
-		
+
 		req.onreadystatechange = function () {
 			if (req.readyState == 4 && req.status == 200) {
 				_this._map = JSON.parse(req.responseText).frames;
@@ -29,7 +29,7 @@ export default class TextureLoader {
 		req.open("GET", mapName, true);
 		req.send();
 	}
-	
+
 	public get(texName:string):PIXI.Texture {
 		return this._textures[texName];
 	}
@@ -50,24 +50,24 @@ export default class TextureLoader {
 
 		return data;
 	}
-	
+
 	private onSheetOrMap() {
 		var sheet:PIXI.BaseTexture = this._sheet;
 		var map:Object = this._map;
-		
+
 		if (sheet === null || map === null) return;
-		
+
 		var frame:any;
 		var rect:PIXI.Rectangle;
-		
+
 		for (var texName in map) {
 			frame = map[texName].frame;
 			rect = new PIXI.Rectangle(frame.x, frame.y, frame.w, frame.h);
 			this._textures[texName] = new PIXI.Texture(sheet, rect);
-			
+
 			//Log.log("debug", "LOADED " + texName);
 		}
-		
+
 		this._callback();
 	}
 }

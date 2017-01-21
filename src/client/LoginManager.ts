@@ -1,4 +1,4 @@
-/// <reference path="../../declarations/jquery.d.ts"/>
+/// <reference path="../declarations/jquery.d.ts"/>
 
 import * as Util from '../common/Util';
 import * as MessageTypes from '../common/messages/MessageTypes';

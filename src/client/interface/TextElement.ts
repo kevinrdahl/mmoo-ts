@@ -1,4 +1,4 @@
-/// <reference path="../../../declarations/pixi.js.d.ts"/>
+/// <reference path="../../declarations/pixi.js.d.ts"/>
 import InterfaceElement from './InterfaceElement';
 
 export default class TextElement extends InterfaceElement {

@@ -22,6 +22,11 @@ export default class Character {
 		return -1;
 	}
 
+	public get name():string {
+		if (this._data) return this._data.name;
+		return "???";
+	}
+
 	public player:Player = null;
 
 	constructor(data:any = null) {

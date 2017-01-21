@@ -7,14 +7,17 @@ import WebSocketClient from '../WebSocketClient';
 
 import Message from '../../common/messages/Message';
 import * as MessageTypes from '../../common/messages/MessageTypes';
+import IDObjectGroup from '../../common/IDObjectGroup';
 
 export default class Game {
 	protected static _idNum:number = 0;
 
 	protected _id:number;
 	protected _rooms:Array<Room> = [];
-	protected _activePlayers:PlayerGroup = new PlayerGroup(); //these players have ENTERED the game
-	protected _pendingPlayers:PlayerGroup = new PlayerGroup(); //these players have only joined
+	//protected _activePlayers:PlayerGroup = new PlayerGroup(); //these players have ENTERED the game
+	//protected _pendingPlayers:PlayerGroup = new PlayerGroup(); //these players have only joined
+	protected _players:IDObjectGroup<Player> = new IDObjectGroup<Player>();
+
 	protected _characterManager:CharacterManager = new CharacterManager();
 
 	//TODO: variable simulation rate
@@ -38,7 +41,7 @@ export default class Game {
 	public getSummary():Object {
 		return {
 			id: this._id,
-			numPlayers: this._activePlayers.count,
+			numPlayers: this._players.count,
 			numRooms: this._rooms.length
 		};
 	}
@@ -104,7 +107,7 @@ export default class Game {
 	 * Log the client in as the character defined by the given data.
 	 * Assumes they have permission to be that character.
 	 *
-	 * If any client is playing at that client's user, boot them.
+	 * If any client is playing as that client's user, boot them.
 	 *
 	 * @param characterData	a Sequelize Instance of Character
 	 */
@@ -122,7 +125,7 @@ export default class Game {
 			this.removePlayer(currentPlayer, "Logged in elsewhere");
 		}
 
-		var character:Character = this._characterManager.getCharacterById(characterData.id);
+		var character:Character = this._characterManager.characters.getById(characterData.id);
 		if (character) {
 			character.player = player;
 			player.character = character;
@@ -132,6 +135,8 @@ export default class Game {
 			character.player = player;
 			this.addCharacter(character);
 		}
+
+		console.log(this.name + ": User '" + client.user.name + "' entered as Character" + character.name);
 
 		client.sendMessage(new MessageTypes.GameJoined(this._id, this._currentFrame, this._updateInterval));
 
@@ -149,14 +154,14 @@ export default class Game {
 	 * Adds a character to the world.
 	 */
 	protected addCharacter(character:Character) {
-		this._characterManager.addCharacter(character);
+		this._characterManager.characters.add(character);
 	}
 
 	/**
 	 * Removes a character from the world.
 	 */
 	protected removeCharacter(character:Character) {
-		this._characterManager.removeCharacter(character);
+		this._characterManager.characters.remove(character);
 	}
 
 	/**
@@ -165,13 +170,7 @@ export default class Game {
 	public getPlayersByUserId(userId:number):Array<Player> {
 		var ret:Array<Player> = [];
 
-		for (var player of this._activePlayers.players) {
-			if (player.userId == userId) {
-				ret.push(player);
-			}
-		}
-
-		for (var player of this._pendingPlayers.players) {
+		for (var player of this._players.list) {
 			if (player.userId == userId) {
 				ret.push(player);
 			}
@@ -181,8 +180,7 @@ export default class Game {
 	}
 
 	public removePlayer(player:Player, reason:string = null) {
-		this._activePlayers.removePlayer(player);
-		this._pendingPlayers.removePlayer(player);
+		this._players.remove(player);
 
 		if (player.client && player.client.connected) {
 			//TODO: tell the client they've been removed

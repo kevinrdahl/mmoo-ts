@@ -1,4 +1,4 @@
-/// <reference path="../../../declarations/pixi.js.d.ts"/>
+/// <reference path="../../declarations/pixi.js.d.ts"/>
 import InterfaceElement from './InterfaceElement';
 import Vector2D from '../../common/Vector2D';
 

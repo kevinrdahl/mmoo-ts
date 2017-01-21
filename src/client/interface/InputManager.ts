@@ -1,4 +1,4 @@
-/// <reference path="../../../declarations/jquery.d.ts"/>
+/// <reference path="../../declarations/jquery.d.ts"/>
 import Vector2D from '../../common/Vector2D';
 import InterfaceElement from './InterfaceElement';
 import Game from '../Game';

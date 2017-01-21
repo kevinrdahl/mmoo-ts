@@ -1,4 +1,4 @@
-/// <reference path="../../../declarations/pixi.js.d.ts"/>
+/// <reference path="../../declarations/pixi.js.d.ts"/>
 import InterfaceElement from './InterfaceElement';
 //import TextureGenerator = require('../textures/TextureGenerator');
 import * as TextureGenerator from '../textures/TextureGenerator';

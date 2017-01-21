@@ -1,5 +1,5 @@
-/// <reference path="../../declarations/pixi.js.d.ts"/>
-/// <reference path="../../declarations/createjs/soundjs.d.ts"/>
+/// <reference path="../declarations/pixi.js.d.ts"/>
+/// <reference path="../declarations/createjs/soundjs.d.ts"/>
 
 //import Log = require('./util/Log');
 import * as Log from './util/Log';

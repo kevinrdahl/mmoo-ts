@@ -1,4 +1,4 @@
-/// <reference path='../../declarations/node.d.ts' />
+/// <reference path='../declarations/node.d.ts' />
 
 import * as http from 'http';
 

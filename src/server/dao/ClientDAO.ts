@@ -1,7 +1,3 @@
-/// <reference path='../../../declarations/mongodb.d.ts' />
-
-//import mongodb = require('mongodb');
-//import * as mongodb from 'mongodb';
 
 let mysql = require('mysql');
 
@@ -20,7 +16,6 @@ export default class ClientDAO {
 	protected _operationQueue:Array<DAOOperation> = [];
 	protected _mySQLPool:any;
 	protected _orm:ORM;
-	//protected _db:mongodb.Db;
 
 	constructor(orm:ORM) {
 		this._orm = orm;

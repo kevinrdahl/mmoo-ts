@@ -1,4 +1,4 @@
-/// <reference path="../../../declarations/pixi.js.d.ts"/>
+/// <reference path="../../declarations/pixi.js.d.ts"/>
 import Vector2D from '../../common/Vector2D';
 import AttachInfo from './AttachInfo';
 import ResizeInfo from './ResizeInfo';

@@ -1,4 +1,4 @@
-/// <reference path='../../declarations/node.d.ts' />
+/// <reference path='../declarations/node.d.ts' />
 
 import BaseServer from './BaseServer';
 import LoginServer from './LoginServer';

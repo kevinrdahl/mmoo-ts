@@ -3,7 +3,7 @@
  * Instead, it just wraps a socket.
  */
 
-/// <reference path='../../declarations/ws.d.ts' />
+/// <reference path='../declarations/ws.d.ts' />
 
 import * as WebSocket from 'ws';
 

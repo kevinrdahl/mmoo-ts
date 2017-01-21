@@ -1,4 +1,4 @@
-/// <reference path="../../../declarations/pixi.js.d.ts"/>
+/// <reference path="../../declarations/pixi.js.d.ts"/>
 import Game from '../Game';
 
 export function simpleRectangle(target:PIXI.RenderTexture, width:number, height:number, color:number, borderWidth:number=0, borderColor:number=0):PIXI.RenderTexture {
