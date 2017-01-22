@@ -50,9 +50,15 @@ export function isNumber(x):boolean {
     return (typeof x === 'number');
 }
 
-//for the sake of completeness
-export function isArray(x):boolean {
-    return Array.isArray(x);
+/**
+ * Returns whether x is an array, and optionally, whether its length is len
+ */
+export function isArray(x, len:number=-1):boolean {
+    if (Array.isArray(x)) {
+        if (len < 0) return true;
+        return x.length == len;
+    }
+    return false;
 }
 
 export function isObject(x, allowNull:boolean=false):boolean {

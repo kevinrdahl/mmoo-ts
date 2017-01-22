@@ -14,6 +14,7 @@ export default class InterfaceElement {
 	public clickable:boolean = false;
 	public draggable:boolean = false;
 	public useOwnBounds:boolean = true; //instead of the container's bounds, use the rect defined by own x,y,width,height
+	public ignoreChildrenForClick:boolean = false; //don't click the kids, click me
 	public dragElement:InterfaceElement = null;
 	public maskSprite:PIXI.Sprite = null;
 
@@ -40,6 +41,11 @@ export default class InterfaceElement {
 	protected _className:string = "InterfaceElement";
 	protected _debugColor:number = 0x0000ff;
 
+	/**
+	 * Updated every frame by the root UI element.
+	 */
+	protected static drawTime:number = 0;
+
 	constructor () {
 
 	}
@@ -47,7 +53,7 @@ export default class InterfaceElement {
 	// === GET ===
 	get x():number { return this._position.x; }
 	get y():number { return this._position.y; }
-	get position():Vector2D { return this._position.clone() }
+	get position():Vector2D { return this._position; }
 	get width():number { return this._width; }
 	get height():number { return this._height; }
 	get displayObject():PIXI.Container { return this._displayObject; }
@@ -63,11 +69,13 @@ export default class InterfaceElement {
 	}
 	get isRoot():boolean { return this._parent == null && this._displayObject.parent != null; }
 	get isFocused():boolean { return InputManager.instance.focusedElement == this; }
+	get visible():boolean { return this._displayObject.visible; }
 
 	//=== SET ===
 	set position(pos:Vector2D) { this._position.set(pos); this.updateDisplayObjectPosition(); }
 	set x(x:number) { this._position.x = x; this.updateDisplayObjectPosition(); }
 	set y(y:number) { this._position.y = y; this.updateDisplayObjectPosition(); }
+	set visible(v:boolean) { this._displayObject.visible = v; }
 
 	public getElementAtPoint(point:Vector2D):InterfaceElement {
 		var element:InterfaceElement = null;
@@ -86,6 +94,9 @@ export default class InterfaceElement {
 			}
 
 			checkChildren = bounds.contains(point.x, point.y);
+			if (checkChildren && this.ignoreChildrenForClick) {
+				return this;
+			}
 		}
 
 		if (checkChildren) {
@@ -151,6 +162,9 @@ export default class InterfaceElement {
 	}
 
 	public draw() {
+		if (this.isRoot) InterfaceElement.drawTime = Date.now();
+		if (!this.visible) return; //this could cause problems?
+
 		var len:number = this._children.length;
 		for (var i = 0; i < len; i++) {
 			this._children[i].draw();
@@ -167,6 +181,18 @@ export default class InterfaceElement {
 		this._width = width;
 		this._height = height;
 		this.onResize();
+	}
+
+	public resizeToFitChildren() {
+		var w:number = 0;
+		var h:number = 0;
+
+		for (var child of this._children) {
+			if (child.width > w) w = child.width;
+			if (child.height > h) h = child.height;
+		}
+
+		this.resize(w, h);
 	}
 
 	//Used by Game to add the root element, shouldn't be used elsewhere

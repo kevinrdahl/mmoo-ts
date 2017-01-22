@@ -3,6 +3,7 @@ import TextElement from '../TextElement';
 import AttachInfo from '../AttachInfo';
 import Panel from '../Panel';
 import ElementList from '../ElementList';
+import TextField from '../TextField';
 
 export default class LoginMenu extends InterfaceElement {
 	private _bg:Panel;
@@ -10,6 +11,9 @@ export default class LoginMenu extends InterfaceElement {
 
 	constructor() {
 		super();
+		this._className = "LoginMenu";
+
+		this.resize(350, 500);
 
 		this._bg = new Panel(350, 500, Panel.BASICBAR);
 		this.addChild(this._bg);
@@ -23,8 +27,8 @@ export default class LoginMenu extends InterfaceElement {
 			this._list.addChild(text);
 		}
 
-		this._width = this._bg.width;
-		this._height = this._bg.height;
+		var field:TextField = new TextField(300, 30, TextElement.basicText);
+		this._list.addChild(field);
 
 		this._bg.attachToParent(AttachInfo.Center);
 		this._list.attachToParent(AttachInfo.Center);

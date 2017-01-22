@@ -1,6 +1,7 @@
 import GenericManager from '../GenericManager';
 import Player from '../Player';
 import PlayerGroup from '../PlayerGroup';
+import IDObjectGroup from '../../../common/IDObjectGroup';
 import TerrainManager from './TerrainManager';
 import Game from '../Game';
 
@@ -14,7 +15,7 @@ export default class Room extends GenericManager {
 	protected static _idNum:number = 0;
 
 	protected _id:number = -1;
-	protected _subscribedPlayers:PlayerGroup = new PlayerGroup();
+	protected _subscribedPlayers:IDObjectGroup<Player> = new IDObjectGroup<Player>();
 
 	protected _game:Game;
 	protected _terrainManager:TerrainManager;
@@ -47,14 +48,14 @@ export default class Room extends GenericManager {
 			return;
 		}
 
-		var changed:boolean = this._subscribedPlayers.addPlayer(player);
+		var changed:boolean = this._subscribedPlayers.add(player);
 		if (changed) {
 			player.onSubscribeToRoom(this);
 		}
 	}
 
 	protected unsubscribePlayer(player:Player) {
-		var changed:boolean = this._subscribedPlayers.removePlayer(player);
+		var changed:boolean = this._subscribedPlayers.remove(player);
 
 		if (changed) {
 			player.onSubscribeToRoom(this);

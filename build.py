@@ -5,7 +5,7 @@ import time
 import subprocess
 
 shellCommands = [
-	'tsc',
+	'tsc --alwaysStrict',
 	'browserify build/client/main.js -o public/js/mmoo-client.js'
 ]
 

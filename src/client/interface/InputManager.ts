@@ -49,7 +49,8 @@ export default class InputManager {
 		this._div.mousemove(this._onMouseMove);
 		this._div.scroll(this._onMouseScroll);
 		this._div.mouseleave(this._onMouseLeave);
-		this._div.keydown(this._onKeyDown);
+		$(window).keydown(this._onKeyDown);
+		$(window).keypress(this._onKeyPress);
 
 		//disable right click context menu
 		this._div.contextmenu(function(e:JQueryMouseEventObject) {
@@ -67,6 +68,7 @@ export default class InputManager {
 			if (element) {
 				this._focusElement = element;
 				if (element.onFocus) {
+					console.log("Focus " + element.fullName);
 					element.onFocus();
 				}
 			}
@@ -154,21 +156,34 @@ export default class InputManager {
 	}
 
 	private _onKeyDown = (e:JQueryKeyEventObject) => {
-		if (this._focusElement && this._focusElement.onKeyDown) {
-			this._focusElement.onKeyDown(String.fromCharCode(e.which));
-		}
-	}
+		var key:string = this.getKeyString(e);
 
-	private _onKeyUp = (e:JQueryKeyEventObject) => {
-		if (this._focusElement && this._focusElement.onKeyUp) {
-			this._focusElement.onKeyUp(String.fromCharCode(e.which));
+		if (this._focusElement && this._focusElement.onKeyDown) {
+			this._focusElement.onKeyDown(key);
+		}
+
+		if (preventedKeys.indexOf(e.which) != -1) {
+			e.preventDefault();
 		}
 	}
 
 	private _onKeyPress = (e:JQueryKeyEventObject) => {
+		var key:string = this.getKeyString(e);
+
 		if (this._focusElement && this._focusElement.onKeyPress) {
-			this._focusElement.onKeyPress(String.fromCharCode(e.which));
+			this._focusElement.onKeyPress(key);
 		}
+
+		if (preventedKeys.indexOf(e.which) != -1) {
+			e.preventDefault();
+		}
+	}
+
+	private getKeyString(e:JQueryKeyEventObject):string {
+		var name:string = keyNames[e.which.toString()];
+
+		if (name) return name;
+		return String.fromCharCode(e.which);
 	}
 
 	private getMouseCoords(e:JQueryMouseEventObject, set:boolean=false) : Vector2D {
@@ -180,4 +195,18 @@ export default class InputManager {
 		if (set) this._mouseCoords = coords;
 		return coords;
 	}
+}
+
+var preventedKeys:Array<number> = [8,9,13,16,17,18,37,38,39,40];
+var keyNames = {
+	"8": "BACKSPACE",
+	"9": "TAB",
+	"13": "ENTER",
+	"16": "SHIFT",
+	"17": "CTRL",
+	"18": "ALT",
+	"38": "UP",
+	"40": "DOWN",
+	"37": "LEFT",
+	"39": "RIGHT"
 }

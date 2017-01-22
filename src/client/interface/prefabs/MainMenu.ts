@@ -30,6 +30,7 @@ export default class MainMenu extends InterfaceElement {
 		switch(name) {
 			case "login": this.showLogin(); break;
 		}
+		this.resizeToFitChildren();
 	}
 
 	private showLogin() {
@@ -39,7 +40,5 @@ export default class MainMenu extends InterfaceElement {
 
 		this.addChild(this._loginMenu);
 		this._loginMenu.attachToParent(AttachInfo.Center);
-
-
 	}
 }

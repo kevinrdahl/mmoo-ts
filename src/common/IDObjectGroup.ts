@@ -5,31 +5,41 @@ export interface IDObject {
 	id: number
 }
 
-/**
- * Provides safe convenience methods for efficiently tracking a group of objects.
- * Uses an Object and an Array. The Array is public for iteration but should NOT be modified.
- */
 export default class IDObjectGroup<T extends IDObject> {
 	public list:Array<T> = [];
 	private _map:Object = {};
 
+	/**
+	 * Provides safe convenience methods for efficiently tracking a group of objects.
+	 * Uses an Object and an Array. The Array is public for iteration but should NOT be modified.
+	 */
 	constructor() {
 
 	}
 
-	public add(obj:T) {
-		if (this._map.hasOwnProperty(obj.id.toString())) return;
+	/**
+	 * Returns whether the object is actually added
+	 */
+	public add(obj:T):boolean {
+		if (this._map.hasOwnProperty(obj.id.toString())) return false;
 
 		this.list.push(obj);
 		this._map[obj.id.toString()] = true;
+
+		return true;
 	}
 
-	public remove(obj:T) {
-		if (!this._map.hasOwnProperty(obj.id.toString())) return;
+	/**
+	 * Returns whether the object is actually removed
+	 */
+	public remove(obj:T):boolean {
+		if (!this._map.hasOwnProperty(obj.id.toString())) return false;
 
 		var index:number = this.list.indexOf(obj);
 		this.list.splice(index, 1);
 		delete this._map[obj.id.toString()];
+
+		return true;
 	}
 
 	public getById(id:number):T {

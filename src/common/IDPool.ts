@@ -16,6 +16,9 @@ export default class IDPool {
 		if (len > num) this._unused.splice(num-1, len-num);
 	}
 
+	/**
+	 * Generates string IDs from an alphabet. IDs can be relinquished and recycled to keep them short.
+	 */
 	constructor(alphabet:string = IDPool._defaultAlphabet) {
 		this._alphabet = alphabet;
 	}
