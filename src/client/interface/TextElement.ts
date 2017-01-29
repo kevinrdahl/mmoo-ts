@@ -2,9 +2,10 @@
 import InterfaceElement from './InterfaceElement';
 
 export default class TextElement extends InterfaceElement {
-	public static basicText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:14, fontFamily:'Open Sans', fill:0xffffff, align:'left'});
-	public static bigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:32, fontFamily:'Open Sans', fill:0xffffff, align:'left'});
-	public static veryBigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize: 48, fontFamily:'Open Sans', fill:0xffffff, align:'left'});
+	//Open Sans
+	public static basicText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:14, fontFamily:'Verdana', fill:0xffffff, align:'left'});
+	public static bigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:32, fontFamily:'Verdana', fill:0xffffff, align:'left'});
+	public static veryBigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize: 48, fontFamily:'Verdana', fill:0xffffff, align:'left'});
 
 	protected _debugColor = 0xff0000;
 
@@ -26,19 +27,32 @@ export default class TextElement extends InterfaceElement {
 		super();
 
 		this._className = "TextElement";
+		this._text = text;
 		this._pixiText = new PIXI.Text(text, style);
 		this._displayObject.addChild(this._pixiText);
 
 		this.resizeToPixiText();
 	}
 
-	//TODO: hidden text fields (*****)
+	/**
+	 * Expensive! Sets the PIXI text twice. Assumes single line.
+	 * (does this work? does it need a draw frame? time will tell)
+	 */
+	public getWidthAtCharacterIndex(i:number):number {
+		if (i >= this._text.length) return -1; //dummy
+		this._pixiText.text = this._text.substr(0, i+1);
+		var w:number = this._pixiText.width;
+		this._pixiText.text = this._text;
+		return w;
+	}
+
 	private setPixiText() {
 		this._pixiText.text = this._text;
 		this.resizeToPixiText();
 	}
 
 	private resizeToPixiText() {
-		this.resize(this._pixiText.width, this._pixiText.height);
+		var width:number = (this._text.length > 0) ? this._pixiText.width : 0;
+		this.resize(width, this._pixiText.height);
 	}
 }

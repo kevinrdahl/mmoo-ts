@@ -5,7 +5,8 @@ import * as TextureGenerator from '../textures/TextureGenerator';
 
 export default class Panel extends InterfaceElement {
 	public static BASIC:number = 0;
-	public static BASICBAR:number = 1;
+	public static HEADER:number = 1;
+	public static FIELD:number = 2;
 
 	protected _debugColor = 0x00ff00;
 
@@ -47,11 +48,14 @@ export default class Panel extends InterfaceElement {
 
 			//style check!
 			switch(this._style) {
-				case Panel.BASICBAR:
-					this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x999999);
+				case Panel.HEADER:
+					this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x616161);
+					break;
+				case Panel.FIELD:
+					this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x121212, 2, 0x616161);
 					break;
 				default: //BASIC
-					this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x333333, 2, 0x999999);
+					this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x2b2b2b, 2, 0x616161);
 			}
 		}
 	}

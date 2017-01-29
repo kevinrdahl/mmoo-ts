@@ -4,7 +4,9 @@ import Vector2D from '../../common/Vector2D';
 import InterfaceElement from './InterfaceElement';
 import Panel from './Panel';
 import TextElement from './TextElement';
+import MaskElement from './MaskElement';
 import AttachInfo from './AttachInfo';
+import GameEvent from '../events/GameEvent';
 
 export default class TextField extends InterfaceElement {
 	public static alphabets:Object = {
@@ -12,14 +14,20 @@ export default class TextField extends InterfaceElement {
 		abc123:/^[a-zA-Z0-9]$/
 	}
 
+	public onTab:(fromElement:InterfaceElement)=>void;
+	public onEnter:(fromElement:InterfaceElement)=>void;
+
 	protected static BLINK_INTERVAL:number = 750;
 
 	protected _bg:Panel;
 	protected _textElement:TextElement;
 	protected _cursor:TextElement;
+	protected _mask:MaskElement;
+
 	protected _text:string = "";
 	protected _blinkTime:number = -1;
 	protected _hidden:boolean = false;
+	protected _borderPadding:number = 4;
 
 	public get hidden():boolean { return this._hidden; }
 	public set hidden(val:boolean) { this._hidden = val; this.updateText(); }
@@ -46,7 +54,7 @@ export default class TextField extends InterfaceElement {
 
 		this.ignoreChildrenForClick = true;
 
-		this._bg = new Panel(width, height, Panel.BASIC);
+		this._bg = new Panel(width, height, Panel.FIELD);
 		this._textElement = new TextElement("", textStyle);
 
 		this.addChild(this._bg);
@@ -54,34 +62,22 @@ export default class TextField extends InterfaceElement {
 
 		//Offset the text slightly to allow for the border (Panel needs some improvement)
 		var textAttach:AttachInfo = AttachInfo.LeftCenter.clone();
-		textAttach.offset.x = 4;
+		textAttach.offset.x = this._borderPadding;
 		this._textElement.attachToParent(textAttach);
 
 		//Attach the cursor to the right of the text
 		this._cursor = new TextElement("|", textStyle);
 		this._textElement.addChild(this._cursor);
-		textAttach = new AttachInfo(new Vector2D(0, 0.5), new Vector2D(1, 0.5), new Vector2D(0,0));
+		textAttach = new AttachInfo(new Vector2D(0, 0.5), new Vector2D(1, 0.5), new Vector2D(-2,0));
 		this._cursor.attachToParent(textAttach);
 		this._cursor.visible = false;
 
-		//Set up listeners
-		this.onFocus = ()=> {
-			this._onFocus();
-		}
-
-		this.onUnfocus = ()=> {
-			this._onUnfocus();
-		}
-
-		this.onKeyPress = (s:string) => {
-			this._onKeyPress(s);
-		}
-
-		this.onKeyDown = (s:string) => {
-			if (s == "BACKSPACE") {
-				this.deleteCharacter();
-			}
-		}
+		//Make a mask, centred on the Panel
+		this._mask = new MaskElement(width - this._borderPadding * 2, height - this._borderPadding * 2);
+		this._bg.addChild(this._mask);
+		this._mask.attachToParent(AttachInfo.Center);
+		this._mask.setAsMask(this._textElement);
+		this._mask.setAsMask(this._cursor);
 	}
 
 	public draw() {
@@ -101,25 +97,44 @@ export default class TextField extends InterfaceElement {
 		}
 	}
 
-	protected _onFocus() {
+	protected onAdd() {
+		this.addEventListener(GameEvent.types.ui.FOCUS, this.onFocus);
+		this.addEventListener(GameEvent.types.ui.UNFOCUS, this.onUnfocus);
+		this.addEventListener(GameEvent.types.ui.KEY, this.onKey);
+	}
+
+	protected onRemove(fromParent:InterfaceElement) {
+		this.removeEventListener(GameEvent.types.ui.FOCUS, this.onFocus);
+		this.removeEventListener(GameEvent.types.ui.UNFOCUS, this.onUnfocus);
+		this.removeEventListener(GameEvent.types.ui.KEY, this.onKey);
+	}
+
+	protected onFocus = (e:GameEvent) => {
 		this._cursor.visible = true;
 		this._blinkTime = InterfaceElement.drawTime;
 	}
 
-	protected _onUnfocus() {
+	protected onUnfocus = (e:GameEvent) => {
 		this._cursor.visible = false;
 	}
 
-	protected _onKeyPress(key:string) {
+	protected onKey = (e:GameEvent) => {
+		var key:string = e.data as string;
+
 		if (key == "BACKSPACE") {
 			this.deleteCharacter();
-		} else if (this._alphabet && !this._alphabet.test(key)) {
+		} else if ((this._alphabet && !this._alphabet.test(key)) || key.length > 1) {
 			console.log("TextField: ignoring character '" + key + "'");
 			return;
 		} else {
-			this._text += key;
-			this.updateText();
+			this.addCharacter(key);
 		}
+	}
+
+	protected addCharacter(char:string) {
+		this._text += char;
+		this.updateText();
+		this.resetCursorBlink();
 	}
 
 	protected deleteCharacter() {
@@ -127,6 +142,12 @@ export default class TextField extends InterfaceElement {
 			this._text = this._text.substr(0, this._text.length-1);
 			this.updateText();
 		}
+		this.resetCursorBlink();
+	}
+
+	protected resetCursorBlink() {
+		this._blinkTime = InterfaceElement.drawTime;
+		this._cursor.visible = true;
 	}
 
 	protected updateText() {
@@ -142,5 +163,10 @@ export default class TextField extends InterfaceElement {
 		}
 
 		this._textElement.text = text;
+
+		var offset:number = (this.width - this._borderPadding * 2) - (this._textElement.width + this._cursor.width - 4);
+		offset = Math.min(offset, this._borderPadding);
+
+		this._textElement.setAttachOffset(offset, 0);
 	}
 }

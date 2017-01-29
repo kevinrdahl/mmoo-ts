@@ -84,7 +84,7 @@ Connection.getRequestId = 0;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Connection;
 
-},{"../common/messages/Message":25,"../common/messages/MessageTypes":26,"./util/Log":21}],2:[function(require,module,exports){
+},{"../common/messages/Message":28,"../common/messages/MessageTypes":29,"./util/Log":24}],2:[function(require,module,exports){
 /// <reference path="../declarations/pixi.js.d.ts"/>
 /// <reference path="../declarations/createjs/soundjs.d.ts"/>
 "use strict";
@@ -94,6 +94,7 @@ const Connection_1 = require("./Connection");
 const LoginManager_1 = require("./LoginManager");
 const TextureLoader_1 = require("./textures/TextureLoader");
 const TextureWorker_1 = require("./textures/TextureWorker");
+const TextureGenerator = require("./textures/TextureGenerator");
 const SoundManager_1 = require("./sound/SoundManager");
 //import SoundAssets = require('./sound/SoundAssets');
 const SoundAssets = require("./sound/SoundAssets");
@@ -142,7 +143,7 @@ class Game {
         }
         //Add the renderer to the DOM
         this.stage = new PIXI.Container();
-        this.renderer = PIXI.autoDetectRenderer(500, 500, { backgroundColor: 0xaaaaff });
+        this.renderer = PIXI.autoDetectRenderer(500, 500, { backgroundColor: 0x0066ff });
         this.renderer.autoResize = true; //TS PIXI doesn't like this as an option
         this.viewDiv.appendChild(this.renderer.view);
         //Worker
@@ -150,6 +151,7 @@ class Game {
         //Listen for resize
         window.addEventListener('resize', () => this._documentResized = true);
         //Add root UI element
+        InterfaceElement_1.default.maskTexture = TextureGenerator.simpleRectangle(null, 8, 8, 0xffffff, 0);
         this.interfaceRoot = new InterfaceElement_1.default();
         this.interfaceRoot.id = "root";
         this.interfaceRoot.name = "root";
@@ -265,11 +267,11 @@ class Game {
     }
 }
 Game.instance = null;
-Game.useDebugGraphics = true;
+Game.useDebugGraphics = false;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
 
-},{"../common/messages/MessageTypes":26,"./Connection":1,"./GameView":3,"./LoginManager":4,"./interface/AttachInfo":5,"./interface/InputManager":7,"./interface/InterfaceElement":8,"./interface/TextElement":10,"./interface/prefabs/MainMenu":13,"./sound/SoundAssets":15,"./sound/SoundManager":16,"./textures/TextureLoader":18,"./textures/TextureWorker":19,"./util/Log":21}],3:[function(require,module,exports){
+},{"../common/messages/MessageTypes":29,"./Connection":1,"./GameView":3,"./LoginManager":4,"./interface/AttachInfo":7,"./interface/InputManager":9,"./interface/InterfaceElement":10,"./interface/TextElement":13,"./interface/prefabs/MainMenu":16,"./sound/SoundAssets":18,"./sound/SoundManager":19,"./textures/TextureGenerator":20,"./textures/TextureLoader":21,"./textures/TextureWorker":22,"./util/Log":24}],3:[function(require,module,exports){
 "use strict";
 class GameView {
     constructor() {
@@ -356,7 +358,116 @@ class LoginManager {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginManager;
 
-},{"../common/Util":23,"../common/messages/MessageTypes":26,"./Game":2}],5:[function(require,module,exports){
+},{"../common/Util":26,"../common/messages/MessageTypes":29,"./Game":2}],5:[function(require,module,exports){
+"use strict";
+class GameEvent {
+    /**
+     * Get instances via the static getInstance.
+     */
+    constructor() {
+    }
+    static getInstance(type, data = null) {
+        var instance;
+        if (GameEvent._pool.length > 0) {
+            instance = GameEvent._pool.pop();
+        }
+        else {
+            instance = new GameEvent();
+        }
+        instance.init(type, data);
+        return instance;
+    }
+    static releaseInstance(instance) {
+        if (GameEvent._pool.length >= GameEvent._maxPooled)
+            return;
+        GameEvent._pool.push(instance);
+    }
+    init(type, data) {
+        this.type = type;
+        this.data = data;
+    }
+}
+GameEvent.types = {
+    ui: {
+        LEFTMOUSEDOWN: "left mouse down",
+        LEFTMOUSEUP: "left mouse up",
+        LEFTMOUSECLICK: "left mouse click",
+        RIGHTMOUSEDOWN: "right mouse down",
+        RIGHTMOUSEUP: "right mouse up",
+        RIGHTMOUSECLICK: "right mouse click",
+        MOUSEOVER: "mouse over",
+        MOUSEOUT: "mouse out",
+        FOCUS: "focus",
+        UNFOCUS: "unfocus",
+        CHANGE: "change",
+        KEY: "key"
+    }
+};
+GameEvent._pool = [];
+GameEvent._maxPooled = 10; //in theory there's only ever one event, unless its handlers spawn more
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = GameEvent;
+
+},{}],6:[function(require,module,exports){
+"use strict";
+const GameEvent_1 = require("./GameEvent");
+class GameEventHandler {
+    constructor() {
+        this._listenersByType = {};
+    }
+    addEventListener(eventType, listener) {
+        var listeners = this._listenersByType[eventType];
+        if (!listeners) {
+            listeners = [];
+            this._listenersByType[eventType] = listeners;
+        }
+        else if (listeners.indexOf(listener) >= 0) {
+            console.log("GameEventDispatcher: Not adding duplicate listener of type " + eventType);
+            return;
+        }
+        listeners.push(listener);
+        console.log("new listener!");
+    }
+    removeEventListener(eventType, listener) {
+        var listeners = this._listenersByType[eventType];
+        if (!listeners) {
+            return;
+        }
+        var index = listeners.indexOf(listener);
+        if (index === -1) {
+            console.log("GameEventDispatcher: Can't remove listener that doesn't exist, type " + eventType);
+        }
+        else {
+            listeners.splice(index, 1);
+        }
+    }
+    removeAllEventListeners() {
+        for (var type in this._listenersByType) {
+            this._listenersByType[type].splice(0); //clears list
+            delete this._listenersByType[type];
+        }
+    }
+    sendNewEvent(type, data = null) {
+        this.sendEvent(GameEvent_1.default.getInstance(type, data));
+    }
+    /**
+     * NOTE: the event will be released after this call
+     */
+    sendEvent(event) {
+        var listeners = this._listenersByType[event.type];
+        if (!listeners) {
+            return;
+        }
+        for (var listener of listeners) {
+            listener(event);
+        }
+        GameEvent_1.default.releaseInstance(event);
+    }
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = GameEventHandler;
+
+},{"./GameEvent":5}],7:[function(require,module,exports){
 "use strict";
 const Vector2D_1 = require("../../common/Vector2D");
 class AttachInfo {
@@ -381,7 +492,7 @@ AttachInfo.LeftCenter = new AttachInfo(new Vector2D_1.default(0, 0.5), new Vecto
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AttachInfo;
 
-},{"../../common/Vector2D":24}],6:[function(require,module,exports){
+},{"../../common/Vector2D":27}],8:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 const InterfaceElement_1 = require("./InterfaceElement");
@@ -502,11 +613,12 @@ ElementList.CENTRE = 2;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ElementList;
 
-},{"./InterfaceElement":8}],7:[function(require,module,exports){
+},{"./InterfaceElement":10}],9:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/jquery.d.ts"/>
 const Vector2D_1 = require("../../common/Vector2D");
 const Game_1 = require("../Game");
+const GameEvent_1 = require("../events/GameEvent");
 /**
  * Wrangles all them silly events and suchlike.
  * Doing anything in the game proper should be relegated to a different class (probably?)
@@ -532,8 +644,8 @@ class InputManager {
                     this._leftMouseDownElement = element;
                     if (element) {
                         this.focus(element);
-                        if (element.onMouseDown)
-                            element.onMouseDown(coords);
+                        //if (element.onMouseDown) element.onMouseDown(coords);
+                        element.sendNewEvent(GameEvent_1.default.types.ui.LEFTMOUSEDOWN);
                     }
                     break;
                 case 2:
@@ -553,10 +665,11 @@ class InputManager {
                 case 1:
                     //left
                     if (element) {
-                        if (element.onMouseUp)
-                            element.onMouseUp(coords);
-                        if (element.onClick && element == this._leftMouseDownElement)
-                            element.onClick(coords);
+                        /*if (element.onMouseUp) element.onMouseUp(coords);
+                        if (element.onClick && element == this._leftMouseDownElement) element.onClick(coords);*/
+                        element.sendNewEvent(GameEvent_1.default.types.ui.LEFTMOUSEUP);
+                        if (element == this._leftMouseDownElement)
+                            element.sendNewEvent(GameEvent_1.default.types.ui.LEFTMOUSECLICK);
                     }
                     this._leftMouseDownCoords = null;
                     this._leftMouseDownElement = null;
@@ -568,7 +681,7 @@ class InputManager {
                     //right
                     break;
                 default:
-                    console.warn("InputManager: mouse input with which=" + e.which + "?");
+                    console.warn("InputManager: mouse input with which = " + e.which + "?");
             }
         };
         this._onMouseMove = (e) => {
@@ -577,8 +690,8 @@ class InputManager {
             if (this.leftMouseDown && coords.distanceTo(this._leftMouseDownCoords) > this.dragThreshold)
                 this.beginDrag();
             //TODO: check whether we're about to drag it?
-            if (this._hoverElement && this._hoverElement != element && this._hoverElement.onHoverEnd) {
-                this._hoverElement.onHoverEnd(coords);
+            if (this._hoverElement && this._hoverElement != element) {
+                this._hoverElement.sendNewEvent(GameEvent_1.default.types.ui.MOUSEOVER);
             }
             //TODO: update dragged element
             this._hoverElement = element;
@@ -591,17 +704,19 @@ class InputManager {
         };
         this._onKeyDown = (e) => {
             var key = this.getKeyString(e);
-            if (this._focusElement && this._focusElement.onKeyDown) {
-                this._focusElement.onKeyDown(key);
+            if (this._focusElement) {
+                //this._focusElement.sendNewEvent(GameEvent.types.ui.KEY, key);
+                var name = keyNames[e.which.toString()];
+                if (name)
+                    this._focusElement.sendNewEvent(GameEvent_1.default.types.ui.KEY, name);
             }
             if (preventedKeys.indexOf(e.which) != -1) {
                 e.preventDefault();
             }
         };
         this._onKeyPress = (e) => {
-            var key = this.getKeyString(e);
-            if (this._focusElement && this._focusElement.onKeyPress) {
-                this._focusElement.onKeyPress(key);
+            if (this._focusElement) {
+                this._focusElement.sendNewEvent(GameEvent_1.default.types.ui.KEY, e.key);
             }
             if (preventedKeys.indexOf(e.which) != -1) {
                 e.preventDefault();
@@ -619,6 +734,7 @@ class InputManager {
     }
     get leftMouseDown() { return this._leftMouseDownCoords != null; }
     get focusedElement() { return this._focusElement; }
+    get mouseCoords() { return this._mouseCoords; }
     init(selector) {
         if (this._initialized)
             return;
@@ -642,15 +758,14 @@ class InputManager {
     }
     focus(element) {
         if (element != this._focusElement) {
-            if (this._focusElement && this._focusElement.onUnfocus) {
-                this._focusElement.onUnfocus();
+            if (this._focusElement) {
+                this._focusElement.sendNewEvent(GameEvent_1.default.types.ui.UNFOCUS);
+                console.log("InputManager: No element focused");
             }
             if (element) {
                 this._focusElement = element;
-                if (element.onFocus) {
-                    console.log("Focus " + element.fullName);
-                    element.onFocus();
-                }
+                console.log("InputManager: Focus " + element.fullName);
+                element.sendNewEvent(GameEvent_1.default.types.ui.FOCUS);
             }
         }
     }
@@ -687,17 +802,20 @@ var keyNames = {
     "39": "RIGHT"
 };
 
-},{"../../common/Vector2D":24,"../Game":2}],8:[function(require,module,exports){
+},{"../../common/Vector2D":27,"../Game":2,"../events/GameEvent":5}],10:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 const Vector2D_1 = require("../../common/Vector2D");
 const InputManager_1 = require("./InputManager");
 const Game_1 = require("../Game");
-/**
- * Base class for anything in the UI. Has a parent and can have children, like DOM elements.
- */
-class InterfaceElement {
+const GameEventHandler_1 = require("../events/GameEventHandler");
+class InterfaceElement extends GameEventHandler_1.default {
+    /**
+     * Base class for anything in the UI. Has a parent and can have children, like DOM elements.
+     * Wraps a PIXI DisplayObjectContainer
+     */
     constructor() {
+        super();
         this.id = "";
         this.name = "";
         this.clickable = false;
@@ -705,7 +823,17 @@ class InterfaceElement {
         this.useOwnBounds = true; //instead of the container's bounds, use the rect defined by own x,y,width,height
         this.ignoreChildrenForClick = false; //don't click the kids, click me
         this.dragElement = null;
-        this.maskSprite = null;
+        /*public onMouseDown:(coords:Vector2D)=>void;
+        public onMouseUp:(coords:Vector2D)=>void;
+        public onClick:(coords:Vector2D)=>void;
+        public onHoverStart:(coords:Vector2D)=>void;
+        public onHoverEnd:(coords:Vector2D)=>void;
+        public onFocus:()=>void;
+        public onUnfocus:()=>void;
+        public onChange:()=>void;
+        public onKeyDown:(which:string)=>void;
+        public onKeyUp:(which:string)=>void;
+        public onKeyPress:(which:string)=>void; //See jQuery documentation for how these differ*/
         this._displayObject = new PIXI.Container();
         this._parent = null;
         this._children = [];
@@ -745,6 +873,7 @@ class InterfaceElement {
     set x(x) { this._position.x = x; this.updateDisplayObjectPosition(); }
     set y(y) { this._position.y = y; this.updateDisplayObjectPosition(); }
     set visible(v) { this._displayObject.visible = v; }
+    set maskSprite(m) { this._displayObject.mask = m; }
     getElementAtPoint(point) {
         var element = null;
         var checkChildren = this.isRoot;
@@ -857,6 +986,7 @@ class InterfaceElement {
         this._children.push(child);
         this._displayObject.addChild(child._displayObject);
         child._parent = this;
+        child.onAdd();
     }
     addChildAt(child, index = -1) {
         if (index < 0 || index > this._children.length) {
@@ -865,9 +995,23 @@ class InterfaceElement {
         }
         this._children.splice(index, 0, child);
         this._displayObject.addChildAt(child._displayObject, index);
+        child.onAdd();
+    }
+    /**
+     * Subclasses should use this to add listeners if needed
+     */
+    onAdd() {
+    }
+    /**
+     * Subclasses should use this to remove their listeners.
+     */
+    onRemove(fromParent) {
     }
     removeChild(child, recurse = false) {
-        this._children.splice(this._children.indexOf(child), 1);
+        var index = this._children.indexOf(child);
+        if (index === -1)
+            return;
+        this._children.splice(index, 1);
         this._displayObject.removeChild(child._displayObject);
         child._parent = null;
         child.detachFromParent();
@@ -877,6 +1021,7 @@ class InterfaceElement {
                 child.removeChild(child._children[child._children.length - 1], true);
             }
         }
+        child.onRemove(this);
     }
     removeSelf(recurse = true) {
         if (this._parent != null)
@@ -916,6 +1061,16 @@ class InterfaceElement {
         }
         //console.log(this.fullName + " position with " + JSON.stringify(info) + ": " + JSON.stringify(this._position));
         this.position = this._position;
+    }
+    setAttachOffset(x, y) {
+        if (!this._attach)
+            return;
+        this._attach.offset.x = x;
+        this._attach.offset.y = y;
+        this.onParentResize(); //cheaty? or just a naming problem
+    }
+    clearMask() {
+        this._displayObject.mask = null;
     }
     getGlobalPosition() {
         var pos = this._position.clone();
@@ -958,6 +1113,7 @@ class InterfaceElement {
         }
     }
 }
+InterfaceElement.maskTexture = null; //8x8
 /**
  * Updated every frame by the root UI element.
  */
@@ -965,7 +1121,28 @@ InterfaceElement.drawTime = 0;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceElement;
 
-},{"../../common/Vector2D":24,"../Game":2,"./InputManager":7}],9:[function(require,module,exports){
+},{"../../common/Vector2D":27,"../Game":2,"../events/GameEventHandler":6,"./InputManager":9}],11:[function(require,module,exports){
+"use strict";
+const InterfaceElement_1 = require("./InterfaceElement");
+class MaskElement extends InterfaceElement_1.default {
+    constructor(width, height) {
+        super();
+        this._debugColor = 0x00ff00;
+        //this.visible = false;
+        this._maskSprite = new PIXI.Sprite(InterfaceElement_1.default.maskTexture);
+        this._displayObject.scale.x = width / 8;
+        this._displayObject.scale.y = height / 8;
+        this._displayObject.addChild(this._maskSprite);
+        this.resize(width, height);
+    }
+    setAsMask(element) {
+        element.maskSprite = this._maskSprite;
+    }
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = MaskElement;
+
+},{"./InterfaceElement":10}],12:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 const InterfaceElement_1 = require("./InterfaceElement");
@@ -1002,21 +1179,25 @@ class Panel extends InterfaceElement_1.default {
             }
             //style check!
             switch (this._style) {
-                case Panel.BASICBAR:
-                    this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x999999);
+                case Panel.HEADER:
+                    this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x616161);
+                    break;
+                case Panel.FIELD:
+                    this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x121212, 2, 0x616161);
                     break;
                 default:
-                    this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x333333, 2, 0x999999);
+                    this._texture = TextureGenerator.simpleRectangle(this._texture, this._width, this._height, 0x2b2b2b, 2, 0x616161);
             }
         }
     }
 }
 Panel.BASIC = 0;
-Panel.BASICBAR = 1;
+Panel.HEADER = 1;
+Panel.FIELD = 2;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Panel;
 
-},{"../textures/TextureGenerator":17,"./InterfaceElement":8}],10:[function(require,module,exports){
+},{"../textures/TextureGenerator":20,"./InterfaceElement":10}],13:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 const InterfaceElement_1 = require("./InterfaceElement");
@@ -1025,6 +1206,7 @@ class TextElement extends InterfaceElement_1.default {
         super();
         this._debugColor = 0xff0000;
         this._className = "TextElement";
+        this._text = text;
         this._pixiText = new PIXI.Text(text, style);
         this._displayObject.addChild(this._pixiText);
         this.resizeToPixiText();
@@ -1044,23 +1226,27 @@ class TextElement extends InterfaceElement_1.default {
         this.resizeToPixiText();
     }
     resizeToPixiText() {
-        this.resize(this._pixiText.width, this._pixiText.height);
+        var width = (this._text.length > 0) ? this._pixiText.width : 0;
+        this.resize(width, this._pixiText.height);
     }
 }
-TextElement.basicText = new PIXI.TextStyle({ fontSize: 14, fontFamily: 'Open Sans', fill: 0xffffff, align: 'left' });
-TextElement.bigText = new PIXI.TextStyle({ fontSize: 32, fontFamily: 'Open Sans', fill: 0xffffff, align: 'left' });
-TextElement.veryBigText = new PIXI.TextStyle({ fontSize: 48, fontFamily: 'Open Sans', fill: 0xffffff, align: 'left' });
+//Open Sans
+TextElement.basicText = new PIXI.TextStyle({ fontSize: 14, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
+TextElement.bigText = new PIXI.TextStyle({ fontSize: 32, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
+TextElement.veryBigText = new PIXI.TextStyle({ fontSize: 48, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextElement;
 
-},{"./InterfaceElement":8}],11:[function(require,module,exports){
+},{"./InterfaceElement":10}],14:[function(require,module,exports){
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
 const Vector2D_1 = require("../../common/Vector2D");
 const InterfaceElement_1 = require("./InterfaceElement");
 const Panel_1 = require("./Panel");
 const TextElement_1 = require("./TextElement");
+const MaskElement_1 = require("./MaskElement");
 const AttachInfo_1 = require("./AttachInfo");
+const GameEvent_1 = require("../events/GameEvent");
 class TextField extends InterfaceElement_1.default {
     /**
      * Allows the user to input text.
@@ -1072,40 +1258,52 @@ class TextField extends InterfaceElement_1.default {
         this._text = "";
         this._blinkTime = -1;
         this._hidden = false;
+        this._borderPadding = 4;
+        this.onFocus = (e) => {
+            this._cursor.visible = true;
+            this._blinkTime = InterfaceElement_1.default.drawTime;
+        };
+        this.onUnfocus = (e) => {
+            this._cursor.visible = false;
+        };
+        this.onKey = (e) => {
+            var key = e.data;
+            if (key == "BACKSPACE") {
+                this.deleteCharacter();
+            }
+            else if ((this._alphabet && !this._alphabet.test(key)) || key.length > 1) {
+                console.log("TextField: ignoring character '" + key + "'");
+                return;
+            }
+            else {
+                this.addCharacter(key);
+            }
+        };
         this._className = "TextField";
         this.resize(width, height);
         this._alphabet = alphabet;
         this._validator = validator;
         this.ignoreChildrenForClick = true;
-        this._bg = new Panel_1.default(width, height, Panel_1.default.BASIC);
+        this._bg = new Panel_1.default(width, height, Panel_1.default.FIELD);
         this._textElement = new TextElement_1.default("", textStyle);
         this.addChild(this._bg);
         this._bg.addChild(this._textElement);
         //Offset the text slightly to allow for the border (Panel needs some improvement)
         var textAttach = AttachInfo_1.default.LeftCenter.clone();
-        textAttach.offset.x = 4;
+        textAttach.offset.x = this._borderPadding;
         this._textElement.attachToParent(textAttach);
         //Attach the cursor to the right of the text
         this._cursor = new TextElement_1.default("|", textStyle);
         this._textElement.addChild(this._cursor);
-        textAttach = new AttachInfo_1.default(new Vector2D_1.default(0, 0.5), new Vector2D_1.default(1, 0.5), new Vector2D_1.default(0, 0));
+        textAttach = new AttachInfo_1.default(new Vector2D_1.default(0, 0.5), new Vector2D_1.default(1, 0.5), new Vector2D_1.default(-2, 0));
         this._cursor.attachToParent(textAttach);
         this._cursor.visible = false;
-        //Set up listeners
-        this.onFocus = () => {
-            this._onFocus();
-        };
-        this.onUnfocus = () => {
-            this._onUnfocus();
-        };
-        this.onKeyPress = (s) => {
-            this._onKeyPress(s);
-        };
-        this.onKeyDown = (s) => {
-            if (s == "BACKSPACE") {
-                this.deleteCharacter();
-            }
-        };
+        //Make a mask, centred on the Panel
+        this._mask = new MaskElement_1.default(width - this._borderPadding * 2, height - this._borderPadding * 2);
+        this._bg.addChild(this._mask);
+        this._mask.attachToParent(AttachInfo_1.default.Center);
+        this._mask.setAsMask(this._textElement);
+        this._mask.setAsMask(this._cursor);
     }
     get hidden() { return this._hidden; }
     set hidden(val) { this._hidden = val; this.updateText(); }
@@ -1129,31 +1327,31 @@ class TextField extends InterfaceElement_1.default {
             }
         }
     }
-    _onFocus() {
-        this._cursor.visible = true;
-        this._blinkTime = InterfaceElement_1.default.drawTime;
+    onAdd() {
+        this.addEventListener(GameEvent_1.default.types.ui.FOCUS, this.onFocus);
+        this.addEventListener(GameEvent_1.default.types.ui.UNFOCUS, this.onUnfocus);
+        this.addEventListener(GameEvent_1.default.types.ui.KEY, this.onKey);
     }
-    _onUnfocus() {
-        this._cursor.visible = false;
+    onRemove(fromParent) {
+        this.removeEventListener(GameEvent_1.default.types.ui.FOCUS, this.onFocus);
+        this.removeEventListener(GameEvent_1.default.types.ui.UNFOCUS, this.onUnfocus);
+        this.removeEventListener(GameEvent_1.default.types.ui.KEY, this.onKey);
     }
-    _onKeyPress(key) {
-        if (key == "BACKSPACE") {
-            this.deleteCharacter();
-        }
-        else if (this._alphabet && !this._alphabet.test(key)) {
-            console.log("TextField: ignoring character '" + key + "'");
-            return;
-        }
-        else {
-            this._text += key;
-            this.updateText();
-        }
+    addCharacter(char) {
+        this._text += char;
+        this.updateText();
+        this.resetCursor();
     }
     deleteCharacter() {
         if (this._text.length > 0) {
             this._text = this._text.substr(0, this._text.length - 1);
             this.updateText();
         }
+        this.resetCursor();
+    }
+    resetCursor() {
+        this._blinkTime = InterfaceElement_1.default.drawTime;
+        this._cursor.visible = true;
     }
     updateText() {
         var text;
@@ -1167,6 +1365,9 @@ class TextField extends InterfaceElement_1.default {
             text = this._text;
         }
         this._textElement.text = text;
+        var offset = (this.width - this._borderPadding * 2) - (this._textElement.width + this._cursor.width - 4);
+        offset = Math.min(offset, this._borderPadding);
+        this._textElement.setAttachOffset(offset, 0);
     }
 }
 TextField.alphabets = {
@@ -1177,7 +1378,7 @@ TextField.BLINK_INTERVAL = 750;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextField;
 
-},{"../../common/Vector2D":24,"./AttachInfo":5,"./InterfaceElement":8,"./Panel":9,"./TextElement":10}],12:[function(require,module,exports){
+},{"../../common/Vector2D":27,"../events/GameEvent":5,"./AttachInfo":7,"./InterfaceElement":10,"./MaskElement":11,"./Panel":12,"./TextElement":13}],15:[function(require,module,exports){
 "use strict";
 const InterfaceElement_1 = require("../InterfaceElement");
 const TextElement_1 = require("../TextElement");
@@ -1185,22 +1386,43 @@ const AttachInfo_1 = require("../AttachInfo");
 const Panel_1 = require("../Panel");
 const ElementList_1 = require("../ElementList");
 const TextField_1 = require("../TextField");
+const InputManager_1 = require("../InputManager");
 class LoginMenu extends InterfaceElement_1.default {
     constructor() {
         super();
         this._className = "LoginMenu";
-        this.resize(350, 500);
-        this._bg = new Panel_1.default(350, 500, Panel_1.default.BASICBAR);
+        this.resize(320, 300);
+        this._bg = new Panel_1.default(350, 300, Panel_1.default.BASIC);
         this.addChild(this._bg);
-        this._list = new ElementList_1.default(350, ElementList_1.default.VERTICAL, 5, ElementList_1.default.CENTRE);
+        this._list = new ElementList_1.default(320, ElementList_1.default.VERTICAL, 6, ElementList_1.default.CENTRE);
         this.addChild(this._list);
-        var strings = ['One way', 'or another', "I'm gonna find ya"];
-        for (var i = 0; i < strings.length; i++) {
-            var text = new TextElement_1.default(strings[i], TextElement_1.default.bigText);
-            this._list.addChild(text);
-        }
-        var field = new TextField_1.default(300, 30, TextElement_1.default.basicText);
+        //Add things to list...
+        var text;
+        var field;
+        //Title
+        text = new TextElement_1.default("MMO Online", TextElement_1.default.bigText);
+        this._list.addChild(text);
+        //Username
+        text = new TextElement_1.default("Username", TextElement_1.default.basicText);
+        text.id = "usernameLabel";
+        this._list.addChild(text);
+        field = new TextField_1.default(250, 28, TextElement_1.default.basicText);
+        field.id = "usernameField";
         this._list.addChild(field);
+        field.onTab = (fromElement) => {
+            InputManager_1.default.instance.focus(this.getElementById("passwordField"));
+        };
+        //Pass
+        text = new TextElement_1.default("Password", TextElement_1.default.basicText);
+        text.id = "passwordLabel";
+        this._list.addChild(text);
+        field = new TextField_1.default(250, 28, TextElement_1.default.basicText);
+        field.id = "passwordField";
+        field.hidden = true;
+        this._list.addChild(field);
+        field.onTab = (fromElement) => {
+            InputManager_1.default.instance.focus(this.getElementById("usernameField"));
+        };
         this._bg.attachToParent(AttachInfo_1.default.Center);
         this._list.attachToParent(AttachInfo_1.default.Center);
     }
@@ -1208,7 +1430,7 @@ class LoginMenu extends InterfaceElement_1.default {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginMenu;
 
-},{"../AttachInfo":5,"../ElementList":6,"../InterfaceElement":8,"../Panel":9,"../TextElement":10,"../TextField":11}],13:[function(require,module,exports){
+},{"../AttachInfo":7,"../ElementList":8,"../InputManager":9,"../InterfaceElement":10,"../Panel":12,"../TextElement":13,"../TextField":14}],16:[function(require,module,exports){
 "use strict";
 const InterfaceElement_1 = require("../InterfaceElement");
 const AttachInfo_1 = require("../AttachInfo");
@@ -1248,7 +1470,7 @@ class MainMenu extends InterfaceElement_1.default {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MainMenu;
 
-},{"../../util/Log":21,"../AttachInfo":5,"../InterfaceElement":8,"./LoginMenu":12}],14:[function(require,module,exports){
+},{"../../util/Log":24,"../AttachInfo":7,"../InterfaceElement":10,"./LoginMenu":15}],17:[function(require,module,exports){
 /*
    Code entry point. Keep it clean.
 */
@@ -1258,7 +1480,7 @@ var viewDiv = document.getElementById("viewDiv");
 var game = new Game_1.default(viewDiv);
 game.init();
 
-},{"./Game":2}],15:[function(require,module,exports){
+},{"./Game":2}],18:[function(require,module,exports){
 "use strict";
 exports.mainMenuMusic = [
     ["music/fortress", "sound/music/fortress.ogg"]
@@ -1269,7 +1491,7 @@ exports.interfaceSounds = [
     ["ui/nope", "sound/ui/nope.ogg"]
 ];
 
-},{}],16:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 "use strict";
 class SoundLoadRequest {
     constructor(name, list, onComplete, onProgress = null) {
@@ -1345,7 +1567,7 @@ SoundManager._instance = null;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = SoundManager;
 
-},{}],17:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 const Game_1 = require("../Game");
@@ -1363,8 +1585,13 @@ function simpleRectangle(target, width, height, color, borderWidth = 0, borderCo
     return target;
 }
 exports.simpleRectangle = simpleRectangle;
+function buttonBackground(width, height, type) {
+    var bgColor = 0x3e3bff;
+    var borderColor = 0x616161;
+}
+exports.buttonBackground = buttonBackground;
 
-},{"../Game":2}],18:[function(require,module,exports){
+},{"../Game":2}],21:[function(require,module,exports){
 "use strict";
 class TextureLoader {
     constructor(sheetName, mapName, callback) {
@@ -1423,7 +1650,7 @@ class TextureLoader {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureLoader;
 
-},{}],19:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 const ColorUtil = require("../util/ColorUtil");
@@ -1563,7 +1790,7 @@ TextureWorker._supportsImageDataConstructor = -1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureWorker;
 
-},{"../util/ColorUtil":20}],20:[function(require,module,exports){
+},{"../util/ColorUtil":23}],23:[function(require,module,exports){
 "use strict";
 function rgbToNumber(r, g, b) {
     return (r << 16) + (g << 8) + b;
@@ -1585,7 +1812,7 @@ function rgbaString(r, g, b, a) {
 }
 exports.rgbaString = rgbaString;
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 /*
    Provides pretty console.log messages, by key.
@@ -1615,7 +1842,7 @@ function log(typeName, msg) {
 }
 exports.log = log;
 
-},{}],22:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 /**
  * Generates string IDs from an alphabet. IDs can be relinquished and recycled to keep them short.
@@ -1677,7 +1904,7 @@ IDPool._alphanumeric = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = IDPool;
 
-},{}],23:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 function noop() { }
 exports.noop = noop;
@@ -1756,7 +1983,7 @@ function isCoordinate(x) {
 }
 exports.isCoordinate = isCoordinate;
 
-},{}],24:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 "use strict";
 class Vector2D {
     constructor(x, y) {
@@ -1846,7 +2073,7 @@ class Vector2D {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Vector2D;
 
-},{}],25:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 const IDPool_1 = require("../IDPool");
 const Vector2D_1 = require("../Vector2D");
@@ -2017,7 +2244,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Message;
 const MessageTypes = require("./MessageTypes");
 
-},{"../IDPool":22,"../Util":23,"../Vector2D":24,"./MessageTypes":26}],26:[function(require,module,exports){
+},{"../IDPool":25,"../Util":26,"../Vector2D":27,"./MessageTypes":29}],29:[function(require,module,exports){
 "use strict";
 const Message_1 = require("./Message");
 const Util = require("../Util");
@@ -2254,4 +2481,4 @@ class RoomLeft extends Message_1.default {
 exports.RoomLeft = RoomLeft;
 classesByType[exports.ROOM_LEFT] = RoomLeft;
 
-},{"../Util":23,"./Message":25}]},{},[14]);
+},{"../Util":26,"./Message":28}]},{},[17]);

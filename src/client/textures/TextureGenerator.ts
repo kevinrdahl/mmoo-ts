@@ -16,3 +16,8 @@ export function simpleRectangle(target:PIXI.RenderTexture, width:number, height:
 
 	return target;
 }
+
+export function buttonBackground(width:number, height:number, type:number) {
+	var bgColor:number = 0x3e3bff;
+	var borderColor:number = 0x616161
+}

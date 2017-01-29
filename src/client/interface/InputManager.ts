@@ -2,6 +2,7 @@
 import Vector2D from '../../common/Vector2D';
 import InterfaceElement from './InterfaceElement';
 import Game from '../Game';
+import GameEvent from '../events/GameEvent';
 
 /**
  * Wrangles all them silly events and suchlike.
@@ -29,6 +30,7 @@ export default class InputManager {
 
 	get leftMouseDown():Boolean { return this._leftMouseDownCoords != null; }
 	get focusedElement():InterfaceElement { return this._focusElement; }
+	get mouseCoords():Vector2D { return this._mouseCoords; }
 
 	constructor() {
 		if (InputManager._instance) {
@@ -61,16 +63,15 @@ export default class InputManager {
 
 	public focus(element:InterfaceElement) {
 		if (element != this._focusElement) {
-			if (this._focusElement && this._focusElement.onUnfocus) {
-				this._focusElement.onUnfocus();
+			if (this._focusElement) {
+				this._focusElement.sendNewEvent(GameEvent.types.ui.UNFOCUS);
+				console.log("InputManager: No element focused")
 			}
 
 			if (element) {
 				this._focusElement = element;
-				if (element.onFocus) {
-					console.log("Focus " + element.fullName);
-					element.onFocus();
-				}
+				console.log("InputManager: Focus " + element.fullName);
+				element.sendNewEvent(GameEvent.types.ui.FOCUS);
 			}
 		}
 	}
@@ -86,7 +87,8 @@ export default class InputManager {
 				this._leftMouseDownElement = element;
 				if (element) {
 					this.focus(element);
-					if (element.onMouseDown) element.onMouseDown(coords);
+					//if (element.onMouseDown) element.onMouseDown(coords);
+					element.sendNewEvent(GameEvent.types.ui.LEFTMOUSEDOWN);
 				}
 				break;
 			case 2:
@@ -108,8 +110,10 @@ export default class InputManager {
 			case 1:
 				//left
 				if (element) {
-					if (element.onMouseUp) element.onMouseUp(coords);
-					if (element.onClick && element == this._leftMouseDownElement) element.onClick(coords);
+					/*if (element.onMouseUp) element.onMouseUp(coords);
+					if (element.onClick && element == this._leftMouseDownElement) element.onClick(coords);*/
+					element.sendNewEvent(GameEvent.types.ui.LEFTMOUSEUP);
+					if (element == this._leftMouseDownElement) element.sendNewEvent(GameEvent.types.ui.LEFTMOUSECLICK);
 				}
 
 				this._leftMouseDownCoords = null;
@@ -122,7 +126,7 @@ export default class InputManager {
 				//right
 				break;
 			default:
-				console.warn("InputManager: mouse input with which=" + e.which + "?");
+				console.warn("InputManager: mouse input with which = " + e.which + "?");
 		}
 	}
 
@@ -133,8 +137,8 @@ export default class InputManager {
 		if (this.leftMouseDown && coords.distanceTo(this._leftMouseDownCoords) > this.dragThreshold) this.beginDrag();
 
 		//TODO: check whether we're about to drag it?
-		if (this._hoverElement && this._hoverElement != element && this._hoverElement.onHoverEnd) {
-			this._hoverElement.onHoverEnd(coords);
+		if (this._hoverElement && this._hoverElement != element) {
+			this._hoverElement.sendNewEvent(GameEvent.types.ui.MOUSEOVER);
 		}
 
 		//TODO: update dragged element
@@ -158,8 +162,10 @@ export default class InputManager {
 	private _onKeyDown = (e:JQueryKeyEventObject) => {
 		var key:string = this.getKeyString(e);
 
-		if (this._focusElement && this._focusElement.onKeyDown) {
-			this._focusElement.onKeyDown(key);
+		if (this._focusElement) {
+			//this._focusElement.sendNewEvent(GameEvent.types.ui.KEY, key);
+			var name:string = keyNames[e.which.toString()];
+			if (name) this._focusElement.sendNewEvent(GameEvent.types.ui.KEY, name);
 		}
 
 		if (preventedKeys.indexOf(e.which) != -1) {
@@ -168,10 +174,8 @@ export default class InputManager {
 	}
 
 	private _onKeyPress = (e:JQueryKeyEventObject) => {
-		var key:string = this.getKeyString(e);
-
-		if (this._focusElement && this._focusElement.onKeyPress) {
-			this._focusElement.onKeyPress(key);
+		if (this._focusElement) {
+			this._focusElement.sendNewEvent(GameEvent.types.ui.KEY, e.key);
 		}
 
 		if (preventedKeys.indexOf(e.which) != -1) {

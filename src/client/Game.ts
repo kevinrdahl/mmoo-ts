@@ -7,6 +7,7 @@ import Connection from './Connection';
 import LoginManager from './LoginManager';
 import TextureLoader from './textures/TextureLoader';
 import TextureWorker from './textures/TextureWorker';
+import * as TextureGenerator from './textures/TextureGenerator';
 import SoundManager from './sound/SoundManager';
 //import SoundAssets = require('./sound/SoundAssets');
 import * as SoundAssets from './sound/SoundAssets';
@@ -25,7 +26,7 @@ import Message from '../common/messages/Message';
 
 export default class Game {
 	public static instance: Game = null;
-	public static useDebugGraphics: boolean = true;
+	public static useDebugGraphics: boolean = false;
 
 	/*=== PUBLIC ===*/
 	public stage: PIXI.Container = null;
@@ -67,7 +68,7 @@ export default class Game {
 
 		//Add the renderer to the DOM
 		this.stage = new PIXI.Container();
-		this.renderer = PIXI.autoDetectRenderer(500, 500, { backgroundColor: 0xaaaaff });
+		this.renderer = PIXI.autoDetectRenderer(500, 500, { backgroundColor: 0x0066ff });
 		this.renderer.autoResize = true; //TS PIXI doesn't like this as an option
 		this.viewDiv.appendChild(this.renderer.view);
 
@@ -78,6 +79,7 @@ export default class Game {
 		window.addEventListener('resize', ()=>this._documentResized = true);
 
 		//Add root UI element
+		InterfaceElement.maskTexture = TextureGenerator.simpleRectangle(null, 8, 8, 0xffffff, 0,);
 		this.interfaceRoot = new InterfaceElement();
 		this.interfaceRoot.id = "root";
 		this.interfaceRoot.name = "root";

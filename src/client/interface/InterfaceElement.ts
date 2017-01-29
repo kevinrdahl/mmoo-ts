@@ -4,11 +4,9 @@ import AttachInfo from './AttachInfo';
 import ResizeInfo from './ResizeInfo';
 import InputManager from './InputManager';
 import Game from '../Game';
+import GameEventHandler from '../events/GameEventHandler';
 
-/**
- * Base class for anything in the UI. Has a parent and can have children, like DOM elements.
- */
-export default class InterfaceElement {
+export default class InterfaceElement extends GameEventHandler {
 	public id:String = "";
 	public name:String = "";
 	public clickable:boolean = false;
@@ -16,9 +14,10 @@ export default class InterfaceElement {
 	public useOwnBounds:boolean = true; //instead of the container's bounds, use the rect defined by own x,y,width,height
 	public ignoreChildrenForClick:boolean = false; //don't click the kids, click me
 	public dragElement:InterfaceElement = null;
-	public maskSprite:PIXI.Sprite = null;
 
-	public onMouseDown:(coords:Vector2D)=>void;
+	public static maskTexture:PIXI.Texture = null; //8x8
+
+	/*public onMouseDown:(coords:Vector2D)=>void;
 	public onMouseUp:(coords:Vector2D)=>void;
 	public onClick:(coords:Vector2D)=>void;
 	public onHoverStart:(coords:Vector2D)=>void;
@@ -28,7 +27,7 @@ export default class InterfaceElement {
 	public onChange:()=>void;
 	public onKeyDown:(which:string)=>void;
 	public onKeyUp:(which:string)=>void;
-	public onKeyPress:(which:string)=>void; //See jQuery documentation for how these differ
+	public onKeyPress:(which:string)=>void; //See jQuery documentation for how these differ*/
 
 	protected _displayObject:PIXI.Container = new PIXI.Container();
 	protected _parent:InterfaceElement = null;
@@ -46,8 +45,12 @@ export default class InterfaceElement {
 	 */
 	protected static drawTime:number = 0;
 
+	/**
+	 * Base class for anything in the UI. Has a parent and can have children, like DOM elements.
+	 * Wraps a PIXI DisplayObjectContainer
+	 */
 	constructor () {
-
+		super();
 	}
 
 	// === GET ===
@@ -76,6 +79,7 @@ export default class InterfaceElement {
 	set x(x:number) { this._position.x = x; this.updateDisplayObjectPosition(); }
 	set y(y:number) { this._position.y = y; this.updateDisplayObjectPosition(); }
 	set visible(v:boolean) { this._displayObject.visible = v; }
+	set maskSprite(m:PIXI.Sprite|PIXI.Graphics) { this._displayObject.mask = m; }
 
 	public getElementAtPoint(point:Vector2D):InterfaceElement {
 		var element:InterfaceElement = null;
@@ -204,6 +208,7 @@ export default class InterfaceElement {
 		this._children.push(child);
 		this._displayObject.addChild(child._displayObject);
 		child._parent = this;
+		child.onAdd();
 	}
 
 	public addChildAt(child:InterfaceElement, index:number = -1) {
@@ -214,10 +219,28 @@ export default class InterfaceElement {
 
 		this._children.splice(index, 0, child);
 		this._displayObject.addChildAt(child._displayObject, index);
+		child.onAdd();
+	}
+
+	/**
+	 * Subclasses should use this to add listeners if needed
+	 */
+	protected onAdd() {
+
+	}
+
+	/**
+	 * Subclasses should use this to remove their listeners.
+	 */
+	protected onRemove(fromParent:InterfaceElement) {
+
 	}
 
 	public removeChild(child:InterfaceElement, recurse:boolean = false) {
-		this._children.splice(this._children.indexOf(child), 1);
+		var index:number = this._children.indexOf(child);
+		if (index === -1) return;
+
+		this._children.splice(index, 1);
 		this._displayObject.removeChild(child._displayObject);
 		child._parent = null;
 		child.detachFromParent();
@@ -228,6 +251,8 @@ export default class InterfaceElement {
 				child.removeChild(child._children[child._children.length-1], true);
 			}
 		}
+
+		child.onRemove(this);
 	}
 
 	public removeSelf(recurse:boolean = true) {
@@ -277,6 +302,18 @@ export default class InterfaceElement {
 
 		//console.log(this.fullName + " position with " + JSON.stringify(info) + ": " + JSON.stringify(this._position));
 		this.position = this._position;
+	}
+
+	public setAttachOffset(x:number, y:number) {
+		if (!this._attach) return;
+		this._attach.offset.x = x;
+		this._attach.offset.y = y;
+
+		this.onParentResize(); //cheaty? or just a naming problem
+	}
+
+	public clearMask() {
+		this._displayObject.mask = null;
 	}
 
 	public getGlobalPosition():Vector2D {
