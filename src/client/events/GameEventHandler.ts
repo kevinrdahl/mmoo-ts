@@ -40,11 +40,12 @@ export default class GameEventHandler {
 	}
 
 	public sendNewEvent(type:string, data:any = null) {
-		this.sendEvent(GameEvent.getInstance(type, data));
+		this.sendEvent(GameEvent.getInstance(type, data, this));
 	}
 
 	/**
-	 * NOTE: the event will be released after this call
+	 * NOTE: the event will be released after this call.
+	 * Also, does not set the "from" property of the event. Good for propagating.
 	 */
 	public sendEvent(event:GameEvent) {
 		var listeners:Array<(e:GameEvent)=>void> = this._listenersByType[event.type];

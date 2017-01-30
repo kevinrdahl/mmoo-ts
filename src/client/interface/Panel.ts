@@ -59,4 +59,9 @@ export default class Panel extends InterfaceElement {
 			}
 		}
 	}
+
+	public destroy() {
+		super.destroy();
+		this._sprite.destroy(true);
+	}
 }

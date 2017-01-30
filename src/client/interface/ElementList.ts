@@ -16,6 +16,7 @@ export default class ElementList extends InterfaceElement {
 	private _padding:number;
 	private _orientation:number;
 	private _childBounds:Array<number> = [];
+	private _childPadding:Array<number> = [];
 	private _alignment:number;
 
 	protected _debugColor = 0xffff00;
@@ -35,18 +36,20 @@ export default class ElementList extends InterfaceElement {
 		}
 	}
 
-	public addChild(child:InterfaceElement, redoLayout:boolean = true) {
+	public addChild(child:InterfaceElement, extraPadding:number = 0, redoLayout:boolean = true) {
 		super.addChild(child);
 		this._childBounds.push(0);
+		this._childPadding.push(this._padding + extraPadding);
 
 		if (redoLayout) {
 			this.redoLayout(child);
 		}
 	}
 
-	public addChildAt(child:InterfaceElement, index:number, redoLayout:boolean = true) {
+	public addChildAt(child:InterfaceElement, index:number, extraPadding:number = 0, redoLayout:boolean = true) {
 		super.addChildAt(child, index);
 		this._childBounds.push(0);
+		this._childPadding.splice(index, 0, extraPadding);
 
 		if (redoLayout) {
 			this.redoLayout(child);
@@ -83,7 +86,7 @@ export default class ElementList extends InterfaceElement {
 
 			if (this._orientation == ElementList.VERTICAL) {
 				child.y = offset;
-				offset += child.height + this._padding;
+				offset += child.height + this._childPadding[index];
 
 				switch(this._alignment) {
 					case ElementList.LEFT: child.x = 0; break;
@@ -93,7 +96,7 @@ export default class ElementList extends InterfaceElement {
 
 			} else { //HORIZONTAL
 				child.x = offset;
-				offset += child.width + this._padding;
+				offset += child.width + this._childPadding[index];
 
 				switch(this._alignment) {
 					case ElementList.TOP: child.y = 0; break;

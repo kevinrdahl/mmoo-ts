@@ -12,11 +12,13 @@ export default class GameEvent {
 			FOCUS:"focus",
 			UNFOCUS:"unfocus",
 			CHANGE:"change",
-			KEY:"key"
+			KEY:"key",
+			TAB:"tab",
+			SUBMIT:"submit"
 		}
 	}
 
-	public static getInstance(type:string, data:any = null):GameEvent {
+	public static getInstance(type:string, data:any = null, from:any=null):GameEvent {
 		var instance:GameEvent;
 
 		if (GameEvent._pool.length > 0) {
@@ -25,7 +27,7 @@ export default class GameEvent {
 			instance = new GameEvent();
 		}
 
-		instance.init(type, data);
+		instance.init(type, data, from);
 		return instance;
 	}
 
@@ -39,6 +41,7 @@ export default class GameEvent {
 
 	public type:string;
 	public data:any;
+	public from:any;
 
 	/**
 	 * Get instances via the static getInstance.
@@ -46,8 +49,9 @@ export default class GameEvent {
 	constructor() {
 	}
 
-	protected init(type:string, data:any) {
+	protected init(type:string, data:any, from:any) {
 		this.type = type;
 		this.data = data;
+		this.from = from;
 	}
 }

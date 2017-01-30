@@ -9,7 +9,7 @@ import AttachInfo from './AttachInfo';
 import GameEvent from '../events/GameEvent';
 
 export default class TextField extends InterfaceElement {
-	public static alphabets:Object = {
+	public static alphabets = {
 		abc:/^[a-zA-Z]$/,
 		abc123:/^[a-zA-Z0-9]$/
 	}
@@ -34,6 +34,9 @@ export default class TextField extends InterfaceElement {
 	public set text(text:string) {
 		this._text = text;
 		this.updateText();
+	}
+	public get text():string {
+		return this._text;
 	}
 
 	protected _alphabet:RegExp;
@@ -123,6 +126,10 @@ export default class TextField extends InterfaceElement {
 
 		if (key == "BACKSPACE") {
 			this.deleteCharacter();
+		} else if (key == "TAB") {
+			this.sendNewEvent(GameEvent.types.ui.TAB);
+		} else if (key == "ENTER") {
+			this.sendNewEvent(GameEvent.types.ui.SUBMIT);
 		} else if ((this._alphabet && !this._alphabet.test(key)) || key.length > 1) {
 			console.log("TextField: ignoring character '" + key + "'");
 			return;

@@ -17,6 +17,11 @@ export default class MaskElement extends InterfaceElement {
 		this.resize(width, height);
 	}
 
+	public destroy() {
+		super.destroy();
+		this._maskSprite.destroy(false);
+	}
+
 	public setAsMask(element:InterfaceElement) {
 		element.maskSprite = this._maskSprite;
 	}

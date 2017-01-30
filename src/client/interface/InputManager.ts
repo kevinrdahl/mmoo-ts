@@ -27,6 +27,15 @@ export default class InputManager {
 	private _leftMouseDownElement:InterfaceElement = null;
 	private _hoverElement:InterfaceElement = null;
 	private _focusElement:InterfaceElement = null;
+	private _trackedKeys:Object = {
+		"SHIFT": false,
+		"CTRL": false,
+		"ALT": false,
+		"UP": false,
+		"DOWN": false,
+		"LEFT": false,
+		"RIGHT": false
+	}
 
 	get leftMouseDown():Boolean { return this._leftMouseDownCoords != null; }
 	get focusedElement():InterfaceElement { return this._focusElement; }
@@ -52,6 +61,7 @@ export default class InputManager {
 		this._div.scroll(this._onMouseScroll);
 		this._div.mouseleave(this._onMouseLeave);
 		$(window).keydown(this._onKeyDown);
+		$(window).keyup(this._onKeyUp);
 		$(window).keypress(this._onKeyPress);
 
 		//disable right click context menu
@@ -65,15 +75,22 @@ export default class InputManager {
 		if (element != this._focusElement) {
 			if (this._focusElement) {
 				this._focusElement.sendNewEvent(GameEvent.types.ui.UNFOCUS);
-				console.log("InputManager: No element focused")
 			}
 
+			this._focusElement = element;
+
 			if (element) {
-				this._focusElement = element;
 				console.log("InputManager: Focus " + element.fullName);
 				element.sendNewEvent(GameEvent.types.ui.FOCUS);
+			} else {
+				console.log("InputManager: No element focused");
 			}
 		}
+	}
+
+	public isKeyDown(key:string):boolean {
+		if (this._trackedKeys.hasOwnProperty(key) && this._trackedKeys[key]) return true;
+		return false;
 	}
 
 	private _onMouseDown = (e:JQueryMouseEventObject) => {
@@ -137,8 +154,13 @@ export default class InputManager {
 		if (this.leftMouseDown && coords.distanceTo(this._leftMouseDownCoords) > this.dragThreshold) this.beginDrag();
 
 		//TODO: check whether we're about to drag it?
-		if (this._hoverElement && this._hoverElement != element) {
-			this._hoverElement.sendNewEvent(GameEvent.types.ui.MOUSEOVER);
+		if (this._hoverElement != element) {
+			if (element) {
+				element.sendNewEvent(GameEvent.types.ui.MOUSEOVER);
+			}
+			if (this._hoverElement) {
+				this._hoverElement.sendNewEvent(GameEvent.types.ui.MOUSEOUT);
+			}
 		}
 
 		//TODO: update dragged element
@@ -164,12 +186,23 @@ export default class InputManager {
 
 		if (this._focusElement) {
 			//this._focusElement.sendNewEvent(GameEvent.types.ui.KEY, key);
-			var name:string = keyNames[e.which.toString()];
-			if (name) this._focusElement.sendNewEvent(GameEvent.types.ui.KEY, name);
+			if (key.length > 1) this._focusElement.sendNewEvent(GameEvent.types.ui.KEY, key);
+		}
+
+		if (this._trackedKeys.hasOwnProperty(key)) {
+			this._trackedKeys[key] = true;
 		}
 
 		if (preventedKeys.indexOf(e.which) != -1) {
 			e.preventDefault();
+		}
+	}
+
+	private _onKeyUp = (e:JQueryKeyEventObject) => {
+		var key:string = this.getKeyString(e);
+
+		if (this._trackedKeys.hasOwnProperty(key)) {
+			this._trackedKeys[key] = false;
 		}
 	}
 
@@ -192,10 +225,12 @@ export default class InputManager {
 
 	private getMouseCoords(e:JQueryMouseEventObject, set:boolean=false) : Vector2D {
 		var offset:JQueryCoordinates = this._div.offset();
+
 		var coords:Vector2D = new Vector2D(
 			e.pageX - offset.left,
 			e.pageY - offset.top
 		);
+
 		if (set) this._mouseCoords = coords;
 		return coords;
 	}

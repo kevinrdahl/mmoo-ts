@@ -236,6 +236,22 @@ export default class InterfaceElement extends GameEventHandler {
 
 	}
 
+	/**
+	 * Necessary for cleaning up WebGL memory. If this element isn't going to be used anymore, call this.
+	 * Called recursively on chldren.
+	 */
+	public destroy() {
+		for (var child of this._children) {
+			child.destroy();
+		}
+
+		if (this._parent) {
+			this.removeSelf(false); //no need to recurse from there, since this already does so
+		}
+
+		//base class has no PIXI stuff to destroy (right?)
+	}
+
 	public removeChild(child:InterfaceElement, recurse:boolean = false) {
 		var index:number = this._children.indexOf(child);
 		if (index === -1) return;

@@ -34,6 +34,11 @@ export default class TextElement extends InterfaceElement {
 		this.resizeToPixiText();
 	}
 
+	public destroy() {
+		super.destroy();
+		this._pixiText.destroy(true);
+	}
+
 	/**
 	 * Expensive! Sets the PIXI text twice. Assumes single line.
 	 * (does this work? does it need a draw frame? time will tell)
