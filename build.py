@@ -9,18 +9,18 @@ shellCommands = [
 	'browserify build/client/main.js -o public/js/mmoo-client.js'
 ]
 
-startTime = time.clock()
+startTime = time.time()
 for command in shellCommands:
 	if platform.system() == 'Windows':
 		command = re.sub(r'/', r'\\', command)
 
-	commandStartTime = time.clock()
+	commandStartTime = time.time()
 	print('Running "{0}"...'.format(command))
 
 	subprocess.call(command, shell=True)
 
-	commandTime = time.clock() - commandStartTime
+	commandTime = time.time() - commandStartTime
 	print('Finished in {0:.2f} seconds\n'.format(round(commandTime,2)))
 
-totalTime = time.clock()
+totalTime = time.time() - startTime
 print('Build completed in {0:.2f} seconds'.format(round(totalTime,2)))
