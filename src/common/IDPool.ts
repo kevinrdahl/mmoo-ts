@@ -5,7 +5,7 @@ export default class IDPool {
 	private static _defaultAlphabet:string = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~`!@#$%^&*()-_=+[]{}|;:<>,.?/';
 	private static _alphanumeric:string = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-	private _indeces:Array<number> = [0];
+	private _indices:Array<number> = [0];
 	private _unused:Array<string> = [];
 	private _maxUnused:number = 100;
 	private _alphabet:string;
@@ -36,9 +36,9 @@ export default class IDPool {
 	private _createID():string {
 		var id:string = '';
 
-		for (var i = 0; i < this._indeces.length; i++) {
+		for (var i = 0; i < this._indices.length; i++) {
 			//allegedly, concat performance is comparable to, if not better than join
-			id += this._alphabet[this._indeces[i]];
+			id += this._alphabet[this._indices[i]];
 		}
 
 		this._increment();
@@ -46,15 +46,15 @@ export default class IDPool {
 	}
 
 	private _increment() {
-		var index = this._indeces.length-1;
+		var index = this._indices.length-1;
 
 		while (true) {
-			this._indeces[index] += 1;
-			if (this._indeces[index] == this._alphabet.length) {
-				this._indeces[index] = 0;
+			this._indices[index] += 1;
+			if (this._indices[index] == this._alphabet.length) {
+				this._indices[index] = 0;
 				index -= 1;
 				if (index < 0)
-					this._indeces.unshift(0);
+					this._indices.unshift(0);
 				else
 					continue;
 			}

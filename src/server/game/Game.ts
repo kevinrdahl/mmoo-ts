@@ -1,6 +1,5 @@
 import Room from './room/Room';
 import Player from './Player';
-import PlayerGroup from './PlayerGroup';
 import CharacterManager from './character/CharacterManager';
 import Character from './character/Character';
 import WebSocketClient from '../WebSocketClient';
@@ -14,8 +13,6 @@ export default class Game {
 
 	protected _id:number;
 	protected _rooms:Array<Room> = [];
-	//protected _activePlayers:PlayerGroup = new PlayerGroup(); //these players have ENTERED the game
-	//protected _pendingPlayers:PlayerGroup = new PlayerGroup(); //these players have only joined
 	protected _players:IDObjectGroup<Player> = new IDObjectGroup<Player>();
 
 	protected _characterManager:CharacterManager = new CharacterManager();
@@ -59,14 +56,14 @@ export default class Game {
 	 */
 	public update() {
 		var currentTime = Date.now();
-		var timeElapsed:number = (currentTime - this._currentUpdateTime) / 1000;
+		var timeDelta:number = (currentTime - this._currentUpdateTime) / 1000;
 
 		this._currentUpdateTime = currentTime;
 
 		if (this._firstUpdateTime === -1) {
 			this._firstUpdateTime = currentTime;
 			this._nextUpdateTime = currentTime + this._updateInterval;
-			timeElapsed = 0; //do nothing on the first frame? sure why not, it's a good test case if little else
+			timeDelta = 0; //do nothing on the first frame? sure why not, it's a good test case if little else
 		}
 
 		this._nextUpdateTime += this._updateInterval;
@@ -74,7 +71,7 @@ export default class Game {
 
 
 		//////////////////////////////////////////////////
-		this.doUpdate(timeElapsed);
+		this.doUpdate(timeDelta);
 		//////////////////////////////////////////////////
 
 
@@ -89,10 +86,10 @@ export default class Game {
 	/**
 	 * Actually does the update. For neatness' sake.
 	 */
-	protected doUpdate(timeElapsed:number)
+	protected doUpdate(timeDelta:number)
 	{
 		for (var room of this._rooms) {
-			room.update(timeElapsed);
+			room.update(timeDelta);
 		}
 	}
 
@@ -130,7 +127,7 @@ export default class Game {
 			character.player = player;
 			player.character = character;
 		} else {
-			character = new Character(CharacterData);
+			character = new Character(characterData);
 			player.character = character;
 			character.player = player;
 			this.addCharacter(character);

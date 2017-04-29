@@ -6,7 +6,7 @@ export default class GenericManager {
 
 	}
 
-	public update(timeElapsed:number) {
+	public update(timeDelta:number) {
 		//noop!
 	}
 }

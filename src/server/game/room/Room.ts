@@ -1,9 +1,9 @@
 import GenericManager from '../GenericManager';
 import Player from '../Player';
-import PlayerGroup from '../PlayerGroup';
 import IDObjectGroup from '../../../common/IDObjectGroup';
 import TerrainManager from './TerrainManager';
 import Game from '../Game';
+import Unit from './entity/Unit';
 
 /**
  * Think of it as a room in a typical dungeon crawl: completely self-contained but connects to other rooms.
@@ -16,6 +16,7 @@ export default class Room extends GenericManager {
 
 	protected _id:number = -1;
 	protected _subscribedPlayers:IDObjectGroup<Player> = new IDObjectGroup<Player>();
+	protected _units:IDObjectGroup<Unit> = new IDObjectGroup<Unit>();
 
 	protected _game:Game;
 	protected _terrainManager:TerrainManager;
@@ -37,9 +38,20 @@ export default class Room extends GenericManager {
 		this._terrainManager = new TerrainManager(this);
 	}
 
-	public update(timeElapsed:number)
+	public update(timeDelta:number)
 	{
 		//console.log(this.name + ": update " + timeElapsed);
+		for (var unit of this._units.list) {
+			unit.updateMovement(timeDelta);
+		}
+
+		for (var unit of this._units.list) {
+			unit.updateAction(timeDelta);
+		}
+	}
+
+	public getUnitByID(id:number):Unit {
+		return this._units.getById(id);
 	}
 
 	protected subscribePlayer(player:Player) {

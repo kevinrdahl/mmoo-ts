@@ -1,5 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var Log = require("./util/Log"); //import Log = require('./util/Log');
 var Message_1 = require("../common/messages/Message");
 var MessageTypes = require("../common/messages/MessageTypes");
@@ -84,13 +85,13 @@ var Connection = (function () {
     return Connection;
 }());
 Connection.getRequestId = 0;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Connection;
 
 },{"../common/messages/Message":32,"../common/messages/MessageTypes":33,"./util/Log":27}],2:[function(require,module,exports){
+"use strict";
 /// <reference path="../declarations/pixi.js.d.ts"/>
 /// <reference path="../declarations/createjs/soundjs.d.ts"/>
-"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 //import Log = require('./util/Log');
 var Log = require("./util/Log");
 var Connection_1 = require("./Connection");
@@ -281,11 +282,11 @@ var Game = (function () {
 }());
 Game.instance = null;
 Game.useDebugGraphics = false;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
 
 },{"../common/messages/MessageTypes":33,"./Connection":1,"./GameView":3,"./LoginManager":4,"./interface/AttachInfo":7,"./interface/InputManager":10,"./interface/InterfaceElement":11,"./interface/TextElement":15,"./interface/prefabs/MainMenu":18,"./sound/SoundAssets":21,"./sound/SoundManager":22,"./textures/TextureGenerator":23,"./textures/TextureLoader":24,"./textures/TextureWorker":25,"./util/Log":27}],3:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var GameView = (function () {
     function GameView() {
         this._frame = -1;
@@ -302,12 +303,12 @@ var GameView = (function () {
     };
     return GameView;
 }());
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GameView;
 
 },{}],4:[function(require,module,exports){
-/// <reference path="../declarations/jquery.d.ts"/>
 "use strict";
+/// <reference path="../declarations/jquery.d.ts"/>
+Object.defineProperty(exports, "__esModule", { value: true });
 var Util = require("../common/Util");
 var MessageTypes = require("../common/messages/MessageTypes");
 var Game_1 = require("./Game");
@@ -375,11 +376,11 @@ var LoginManager = (function () {
     };
     return LoginManager;
 }());
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginManager;
 
 },{"../common/Util":30,"../common/messages/MessageTypes":33,"./Game":2}],5:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var GameEvent = (function () {
     /**
      * Get instances via the static getInstance.
@@ -431,11 +432,11 @@ GameEvent.types = {
 };
 GameEvent._pool = [];
 GameEvent._maxPooled = 10; //in theory there's only ever one event, unless its handlers spawn more
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GameEvent;
 
 },{}],6:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var GameEvent_1 = require("./GameEvent");
 var GameEventHandler = (function () {
     function GameEventHandler() {
@@ -493,11 +494,11 @@ var GameEventHandler = (function () {
     };
     return GameEventHandler;
 }());
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GameEventHandler;
 
 },{"./GameEvent":5}],7:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var Vector2D_1 = require("../../common/Vector2D");
 var AttachInfo = (function () {
     function AttachInfo(from, to, offset) {
@@ -519,17 +520,22 @@ AttachInfo.TopCenter = new AttachInfo(new Vector2D_1.default(0.5, 0), new Vector
 AttachInfo.BottomCenter = new AttachInfo(new Vector2D_1.default(0.5, 1), new Vector2D_1.default(0.5, 1), new Vector2D_1.default(0, 0));
 AttachInfo.RightCenter = new AttachInfo(new Vector2D_1.default(1, 0.5), new Vector2D_1.default(1, 0.5), new Vector2D_1.default(0, 0));
 AttachInfo.LeftCenter = new AttachInfo(new Vector2D_1.default(0, 0.5), new Vector2D_1.default(0, 0.5), new Vector2D_1.default(0, 0));
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AttachInfo;
 
 },{"../../common/Vector2D":31}],8:[function(require,module,exports){
-/// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+/// <reference path="../../declarations/pixi.js.d.ts"/>
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var InterfaceElement_1 = require("./InterfaceElement");
 var GameEvent_1 = require("../events/GameEvent");
 var BaseButton = (function (_super) {
@@ -609,16 +615,21 @@ var BaseButton = (function (_super) {
 BaseButton.STATE_NORMAL = 1;
 BaseButton.STATE_HIGHLIGHT = 2;
 BaseButton.STATE_DISABLED = 3;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = BaseButton;
 
 },{"../events/GameEvent":5,"./InterfaceElement":11}],9:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var InterfaceElement_1 = require("./InterfaceElement");
 var ElementList = (function (_super) {
@@ -749,11 +760,11 @@ ElementList.TOP = ElementList.LEFT;
 ElementList.RIGHT = 1;
 ElementList.BOTTOM = ElementList.RIGHT;
 ElementList.CENTRE = 2;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ElementList;
 
 },{"./InterfaceElement":11}],10:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 /// <reference path="../../declarations/jquery.d.ts"/>
 var Vector2D_1 = require("../../common/Vector2D");
 var Game_1 = require("../Game");
@@ -974,7 +985,6 @@ var InputManager = (function () {
     return InputManager;
 }());
 InputManager._instance = null;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InputManager;
 var preventedKeys = [8, 9, 13, 16, 17, 18, 37, 38, 39, 40];
 var keyNames = {
@@ -992,11 +1002,17 @@ var keyNames = {
 
 },{"../../common/Vector2D":31,"../Game":2,"../events/GameEvent":5}],11:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var Vector2D_1 = require("../../common/Vector2D");
 var InputManager_1 = require("./InputManager");
@@ -1383,16 +1399,21 @@ InterfaceElement.maskTexture = null; //8x8
  * Updated every frame by the root UI element.
  */
 InterfaceElement.drawTime = 0;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceElement;
 
 },{"../../common/Vector2D":31,"../Game":2,"../events/GameEventHandler":6,"./InputManager":10}],12:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var InterfaceElement_1 = require("./InterfaceElement");
 var MaskElement = (function (_super) {
     __extends(MaskElement, _super);
@@ -1416,16 +1437,21 @@ var MaskElement = (function (_super) {
     };
     return MaskElement;
 }(InterfaceElement_1.default));
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MaskElement;
 
 },{"./InterfaceElement":11}],13:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var InterfaceElement_1 = require("./InterfaceElement");
 //import TextureGenerator = require('../textures/TextureGenerator');
@@ -1483,17 +1509,22 @@ var Panel = (function (_super) {
 Panel.BASIC = 0;
 Panel.HEADER = 1;
 Panel.FIELD = 2;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Panel;
 
 },{"../textures/TextureGenerator":23,"./InterfaceElement":11}],14:[function(require,module,exports){
-/// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+/// <reference path="../../declarations/pixi.js.d.ts"/>
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var BaseButton_1 = require("./BaseButton");
 var AssetCache_1 = require("../../common/AssetCache");
 var TextElement_1 = require("./TextElement");
@@ -1560,16 +1591,21 @@ TextButton.colorSchemes = {
 TextButton._bgCache = new AssetCache_1.default(10, function (deleted) {
     deleted.destroy(true);
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextButton;
 
 },{"../../common/AssetCache":28,"../textures/TextureGenerator":23,"./AttachInfo":7,"./BaseButton":8,"./TextElement":15}],15:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var InterfaceElement_1 = require("./InterfaceElement");
 var TextElement = (function (_super) {
@@ -1633,17 +1669,22 @@ var TextElement = (function (_super) {
 TextElement.basicText = new PIXI.TextStyle({ fontSize: 14, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
 TextElement.bigText = new PIXI.TextStyle({ fontSize: 32, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
 TextElement.veryBigText = new PIXI.TextStyle({ fontSize: 48, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextElement;
 
 },{"./InterfaceElement":11}],16:[function(require,module,exports){
-/// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+/// <reference path="../../declarations/pixi.js.d.ts"/>
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var Vector2D_1 = require("../../common/Vector2D");
 var InterfaceElement_1 = require("./InterfaceElement");
 var Panel_1 = require("./Panel");
@@ -1801,16 +1842,21 @@ TextField.alphabets = {
     abc123: /^[a-zA-Z0-9]$/
 };
 TextField.BLINK_INTERVAL = 750;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextField;
 
 },{"../../common/Vector2D":31,"../events/GameEvent":5,"./AttachInfo":7,"./InterfaceElement":11,"./MaskElement":12,"./Panel":13,"./TextElement":15}],17:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var InterfaceElement_1 = require("../InterfaceElement");
 var TextElement_1 = require("../TextElement");
 var AttachInfo_1 = require("../AttachInfo");
@@ -1886,16 +1932,21 @@ var LoginMenu = (function (_super) {
     }
     return LoginMenu;
 }(InterfaceElement_1.default));
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginMenu;
 
 },{"../../events/GameEvent":5,"../AttachInfo":7,"../ElementList":9,"../InputManager":10,"../InterfaceElement":11,"../Panel":13,"../TextButton":14,"../TextElement":15,"../TextField":16,"./TextFieldListManager":19}],18:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var InterfaceElement_1 = require("../InterfaceElement");
 var AttachInfo_1 = require("../AttachInfo");
 var LoginMenu_1 = require("./LoginMenu");
@@ -1934,16 +1985,21 @@ var MainMenu = (function (_super) {
     };
     return MainMenu;
 }(InterfaceElement_1.default));
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MainMenu;
 
 },{"../../util/Log":27,"../AttachInfo":7,"../InterfaceElement":11,"./LoginMenu":17}],19:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var GameEvent_1 = require("../../events/GameEvent");
 var GameEventHandler_1 = require("../../events/GameEventHandler");
 var InputManager_1 = require("../InputManager");
@@ -1994,14 +2050,14 @@ var TextFieldListManager = (function (_super) {
     };
     return TextFieldListManager;
 }(GameEventHandler_1.default));
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextFieldListManager;
 
 },{"../../events/GameEvent":5,"../../events/GameEventHandler":6,"../InputManager":10}],20:[function(require,module,exports){
+"use strict";
 /*
    Code entry point. Keep it clean.
 */
-"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var Game_1 = require("./Game");
 var viewDiv = document.getElementById("viewDiv");
 var game = new Game_1.default(viewDiv);
@@ -2009,6 +2065,7 @@ game.init();
 
 },{"./Game":2}],21:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.mainMenuMusic = [
     ["music/fortress", "sound/music/fortress.ogg"]
 ];
@@ -2020,6 +2077,7 @@ exports.interfaceSounds = [
 
 },{}],22:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var SoundLoadRequest = (function () {
     function SoundLoadRequest(name, list, onComplete, onProgress) {
         if (onProgress === void 0) { onProgress = null; }
@@ -2108,11 +2166,11 @@ var SoundManager = (function () {
     return SoundManager;
 }());
 SoundManager._instance = null;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = SoundManager;
 
 },{}],23:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var Game_1 = require("../Game");
 function simpleRectangle(target, width, height, color, borderWidth, borderColor) {
@@ -2139,6 +2197,7 @@ exports.buttonBackground = buttonBackground;
 
 },{"../Game":2}],24:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var TextureLoader = (function () {
     function TextureLoader(sheetName, mapName, callback) {
         this._sheet = null;
@@ -2189,16 +2248,17 @@ var TextureLoader = (function () {
             frame = map[texName].frame;
             rect = new PIXI.Rectangle(frame.x, frame.y, frame.w, frame.h);
             this._textures[texName] = new PIXI.Texture(sheet, rect);
+            //Log.log("debug", "LOADED " + texName);
         }
         this._callback();
     };
     return TextureLoader;
 }());
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureLoader;
 
 },{}],25:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var ColorUtil = require("../util/ColorUtil");
 /**
@@ -2336,11 +2396,11 @@ var TextureWorker = (function () {
     return TextureWorker;
 }());
 TextureWorker._supportsImageDataConstructor = -1;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureWorker;
 
 },{"../util/ColorUtil":26}],26:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 function rgbToNumber(r, g, b) {
     return (r << 16) + (g << 8) + b;
 }
@@ -2363,6 +2423,7 @@ exports.rgbaString = rgbaString;
 
 },{}],27:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 /*
    Provides pretty console.log messages, by key.
 */
@@ -2412,6 +2473,7 @@ exports.log = log;
 
 },{}],28:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var AssetCache = (function () {
     /**
      * Stores objects by key, and discards the oldest once capacity is reached.
@@ -2458,11 +2520,11 @@ var AssetCache = (function () {
     };
     return AssetCache;
 }());
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AssetCache;
 
 },{}],29:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * Generates string IDs from an alphabet. IDs can be relinquished and recycled to keep them short.
  */
@@ -2472,7 +2534,7 @@ var IDPool = (function () {
      */
     function IDPool(alphabet) {
         if (alphabet === void 0) { alphabet = IDPool._defaultAlphabet; }
-        this._indeces = [0];
+        this._indices = [0];
         this._unused = [];
         this._maxUnused = 100;
         this._alphabet = alphabet;
@@ -2500,22 +2562,22 @@ var IDPool = (function () {
     };
     IDPool.prototype._createID = function () {
         var id = '';
-        for (var i = 0; i < this._indeces.length; i++) {
+        for (var i = 0; i < this._indices.length; i++) {
             //allegedly, concat performance is comparable to, if not better than join
-            id += this._alphabet[this._indeces[i]];
+            id += this._alphabet[this._indices[i]];
         }
         this._increment();
         return id;
     };
     IDPool.prototype._increment = function () {
-        var index = this._indeces.length - 1;
+        var index = this._indices.length - 1;
         while (true) {
-            this._indeces[index] += 1;
-            if (this._indeces[index] == this._alphabet.length) {
-                this._indeces[index] = 0;
+            this._indices[index] += 1;
+            if (this._indices[index] == this._alphabet.length) {
+                this._indices[index] = 0;
                 index -= 1;
                 if (index < 0)
-                    this._indeces.unshift(0);
+                    this._indices.unshift(0);
                 else
                     continue;
             }
@@ -2526,11 +2588,11 @@ var IDPool = (function () {
 }());
 IDPool._defaultAlphabet = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~`!@#$%^&*()-_=+[]{}|;:<>,.?/';
 IDPool._alphanumeric = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = IDPool;
 
 },{}],30:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 function noop() { }
 exports.noop = noop;
 ////////////////////////////////////////
@@ -2612,8 +2674,11 @@ exports.isCoordinate = isCoordinate;
 
 },{}],31:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var Vector2D = (function () {
     function Vector2D(x, y) {
+        if (x === void 0) { x = 0; }
+        if (y === void 0) { y = 0; }
         this.x = x;
         this.y = y;
     }
@@ -2625,6 +2690,11 @@ var Vector2D = (function () {
     Vector2D.prototype.add = function (v) {
         this.x += v.x;
         this.y += v.y;
+        return this;
+    };
+    Vector2D.prototype.addScaled = function (v, scale) {
+        this.x += v.x * scale;
+        this.y += v.y * scale;
         return this;
     };
     Vector2D.prototype.sub = function (v) {
@@ -2681,6 +2751,9 @@ var Vector2D = (function () {
         other.add(this);
         return ret;
     };
+    Vector2D.prototype.angleTo = function (other) {
+        return Vector2D.radToDeg(Math.atan2(other.y - this.y, other.x - this.x));
+    };
     Vector2D.prototype.withinDistance = function (other, distance) {
         var xDiff = other.x - this.x;
         var yDiff = other.y - this.y;
@@ -2690,6 +2763,9 @@ var Vector2D = (function () {
     Vector2D.prototype.toJSON = function () {
         return [this.x, this.y];
     };
+    Vector2D.polar = function (angle, distance) {
+        return new Vector2D(0, 0).offset(angle, distance);
+    };
     Vector2D.degToRad = function (angle) {
         return (angle * Math.PI) / 180.0;
     };
@@ -2698,11 +2774,11 @@ var Vector2D = (function () {
     };
     return Vector2D;
 }());
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Vector2D;
 
 },{}],32:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var IDPool_1 = require("../IDPool");
 var Vector2D_1 = require("../Vector2D");
 //import * as MessageTypes from './MessageTypes'; moved this to bottom because of circular referencing gone wrong
@@ -2869,17 +2945,22 @@ var Message = (function () {
 }());
 Message._abbreviations = null;
 Message._expansions = null;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Message;
 var MessageTypes = require("./MessageTypes");
 
 },{"../IDPool":29,"../Util":30,"../Vector2D":31,"./MessageTypes":33}],33:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var Message_1 = require("./Message");
 var Util = require("../Util");
 /**

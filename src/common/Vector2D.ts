@@ -1,7 +1,7 @@
 export default class Vector2D {
 	constructor (
-		public x:number,
-		public y:number
+		public x:number = 0,
+		public y:number = 0
 	) {}
 
 	public set(v:Vector2D):Vector2D {
@@ -13,6 +13,12 @@ export default class Vector2D {
 	public add(v:Vector2D):Vector2D {
 		this.x += v.x;
 		this.y += v.y;
+		return this;
+	}
+
+	public addScaled(v:Vector2D, scale:number):Vector2D {
+		this.x += v.x * scale;
+		this.y += v.y * scale;
 		return this;
 	}
 
@@ -80,6 +86,10 @@ export default class Vector2D {
 		return ret;
 	}
 
+	public angleTo(other:Vector2D):number {
+		return Vector2D.radToDeg(Math.atan2(other.y - this.y, other.x - this.x));
+	}
+
 	public withinDistance(other:Vector2D, distance:number):boolean {
 		var xDiff = other.x - this.x;
 		var yDiff = other.y - this.y;
@@ -89,6 +99,10 @@ export default class Vector2D {
 
 	public toJSON() {
 		return [this.x, this.y];
+	}
+
+	public static polar(angle:number, distance:number) {
+		return new Vector2D(0, 0).offset(angle, distance);
 	}
 
 	public static degToRad(angle:number):number {
