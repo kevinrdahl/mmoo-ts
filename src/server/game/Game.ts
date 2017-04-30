@@ -12,7 +12,7 @@ export default class Game {
 	protected static _idNum:number = 0;
 
 	protected _id:number;
-	protected _rooms:Array<Room> = [];
+	protected _rooms:IDObjectGroup<Room> = new IDObjectGroup<Room>();
 	protected _players:IDObjectGroup<Player> = new IDObjectGroup<Player>();
 
 	protected _characterManager:CharacterManager = new CharacterManager();
@@ -28,6 +28,7 @@ export default class Game {
 	public get name():string { return "Game " + this._id; }
 	public get currentFrame():number { return this._currentFrame; }
 	public get currentTime():number { return this._currentUpdateTime; }
+	public get timeSinceStart():number { return this._currentUpdateTime - this._firstUpdateTime; }
 	public get characterManager():CharacterManager { return this._characterManager; }
 
 	constructor() {
@@ -39,7 +40,7 @@ export default class Game {
 		return {
 			id: this._id,
 			numPlayers: this._players.count,
-			numRooms: this._rooms.length
+			numRooms: this._rooms.list.length
 		};
 	}
 
@@ -88,7 +89,7 @@ export default class Game {
 	 */
 	protected doUpdate(timeDelta:number)
 	{
-		for (var room of this._rooms) {
+		for (var room of this._rooms.list) {
 			room.update(timeDelta);
 		}
 	}
@@ -194,6 +195,6 @@ export default class Game {
 		var room:Room = new Room(this);
 		room.init();
 
-		this._rooms.push(room);
+		this._rooms.add(room);
 	}
 }

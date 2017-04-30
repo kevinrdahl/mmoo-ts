@@ -2675,6 +2675,7 @@ exports.isCoordinate = isCoordinate;
 },{}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+var Util = require("./Util");
 var Vector2D = (function () {
     function Vector2D(x, y) {
         if (x === void 0) { x = 0; }
@@ -2766,6 +2767,16 @@ var Vector2D = (function () {
     Vector2D.polar = function (angle, distance) {
         return new Vector2D(0, 0).offset(angle, distance);
     };
+    Vector2D.fromArray = function (arr) {
+        if (Util.isCoordinate(arr))
+            return Vector2D.fromArrayUnchecked(arr);
+        console.log("Vector2D: invalid array");
+        console.log(arr);
+        return new Vector2D();
+    };
+    Vector2D.fromArrayUnchecked = function (arr) {
+        return new Vector2D(arr[0], arr[1]);
+    };
     Vector2D.degToRad = function (angle) {
         return (angle * Math.PI) / 180.0;
     };
@@ -2776,7 +2787,7 @@ var Vector2D = (function () {
 }());
 exports.default = Vector2D;
 
-},{}],32:[function(require,module,exports){
+},{"./Util":30}],32:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var IDPool_1 = require("../IDPool");
@@ -2963,13 +2974,15 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var Message_1 = require("./Message");
 var Util = require("../Util");
-/**
- * Single-digit numbers should be reserved for very common types
- */
+var Vector2D_1 = require("../Vector2D");
+//Single-digit numbers should be reserved for very common types
+////////////////////////////////////////////////////////////////////////////////
 exports.PING = 0;
-/**
- * Everything else can incur the whopping 1-character payload increase
- */
+exports.UNIT_MOVED = 1; //a unit's direction has changed;
+exports.UNIT_HP_CHANGED = 2;
+exports.UNIT_ATTACKED = 3;
+//Everything else can incur the whopping 1-character payload increase
+////////////////////////////////////////////////////////////////////////////////
 exports.USER = 10; //login, create account, character operations
 exports.CRYPTO = 11; //wraps some other message
 exports.GET_REQUEST = 12; //general-purpose info retrieval (eg rsa key)
@@ -2978,11 +2991,17 @@ exports.GAME_JOINED = 14; //also contains information about the game's state
 exports.GAME_LEFT = 15;
 exports.ROOM_JOINED = 16;
 exports.ROOM_LEFT = 17;
+exports.FRAME = 18;
+//I suspect there will be many unit message types. Reserve [50,70] for
+//all but the most common unit messages
+////////////////////////////////////////////////////////////////////////////////
+exports.UNIT_SEEN = 50; //must also contain a description of the unit
+exports.UNIT_UNSEEN = 51;
 /**
  * Giving everything its own class makes things neat and happy. Probably.
  * This file will likely become very long, but it's basically just type checking so oh well.
  */
-var classesByType = [];
+var classesByType = {};
 function getClassByType(type) {
     var c = classesByType[type];
     if (c)
@@ -3229,5 +3248,106 @@ var RoomLeft = (function (_super) {
 }(Message_1.default));
 exports.RoomLeft = RoomLeft;
 classesByType[exports.ROOM_LEFT] = RoomLeft;
+/**
+ * A unit's direction has changed.
+ */
+var UnitMoved = (function (_super) {
+    __extends(UnitMoved, _super);
+    function UnitMoved(unitId, direction, position) {
+        var _this = _super.call(this, exports.UNIT_MOVED) || this;
+        _this.unitId = unitId;
+        _this.direction = direction;
+        _this.position = position;
+        return _this;
+    }
+    UnitMoved.fromArgs = function (args) {
+        if (Util.isInt(args[0]) && Util.isInt(args[1]) && Util.isCoordinate(args[2])) {
+            return new UnitMoved(args[0], args[1], Vector2D_1.default.fromArrayUnchecked(args[2]));
+        }
+        return null;
+    };
+    UnitMoved.prototype.serialize = function () {
+        var s = _super.prototype.serialize.call(this);
+        s += JSON.stringify([this.unitId, this.direction, this.position.round()]);
+        return s;
+    };
+    return UnitMoved;
+}(Message_1.default));
+exports.UnitMoved = UnitMoved;
+classesByType[exports.UNIT_MOVED] = UnitMoved;
+/**
+ * A unit appears or otherwise becomes visible. Contains everything a client
+ * should need to know about a unit. An additional message with more information
+ * should be sent to the unit's owner, if applicable.
+ *
+ * Just a JSON object? This is likely to be a good data optimization target in future.
+ */
+var UnitSeen = (function (_super) {
+    __extends(UnitSeen, _super);
+    /**
+     * Data should be created by the Unit class.
+     */
+    function UnitSeen(data) {
+        var _this = _super.call(this, exports.UNIT_SEEN) || this;
+        _this.data = data;
+        return _this;
+    }
+    UnitSeen.fromArgs = function (args) {
+        if (args.length == 1) {
+            return new UnitSeen(args[0]);
+        }
+        return null;
+    };
+    UnitSeen.prototype.serialize = function () {
+        return _super.prototype.serialize.call(this) + JSON.stringify([this.data]);
+    };
+    return UnitSeen;
+}(Message_1.default));
+exports.UnitSeen = UnitSeen;
+classesByType[exports.UNIT_SEEN] = UnitSeen;
+/**
+ * Player can no longer see this unit, for whatever reason.
+ */
+var UnitUnseen = (function (_super) {
+    __extends(UnitUnseen, _super);
+    function UnitUnseen(unitId) {
+        var _this = _super.call(this, exports.UNIT_UNSEEN) || this;
+        _this.unitId = unitId;
+        return _this;
+    }
+    UnitUnseen.fromArgs = function (args) {
+        if (Util.isInt(args[0])) {
+            return new UnitUnseen(args[0]);
+        }
+        return null;
+    };
+    UnitUnseen.prototype.serialize = function () {
+        return _super.prototype.serialize.call(this) + JSON.stringify([this.unitId]);
+    };
+    return UnitUnseen;
+}(Message_1.default));
+exports.UnitUnseen = UnitUnseen;
+classesByType[exports.UNIT_UNSEEN] = UnitUnseen;
+var Frame = (function (_super) {
+    __extends(Frame, _super);
+    function Frame(frameId, time) {
+        var _this = _super.call(this, exports.FRAME) || this;
+        _this.frameId = frameId;
+        _this.time = time;
+        return _this;
+    }
+    Frame.fromArgs = function (args) {
+        if (Util.isInt(args[0]) && Util.isNumber(args[1])) {
+            return new Frame(args[0], args[1]);
+        }
+        return null;
+    };
+    Frame.prototype.serialize = function () {
+        return _super.prototype.serialize.call(this) + JSON.stringify([this.frameId, this.time]);
+    };
+    return Frame;
+}(Message_1.default));
+exports.Frame = Frame;
+classesByType[exports.FRAME] = Frame;
 
-},{"../Util":30,"./Message":32}]},{},[20]);
+},{"../Util":30,"../Vector2D":31,"./Message":32}]},{},[20]);

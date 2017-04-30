@@ -1,6 +1,8 @@
 import Entity from './Entity';
 import Order from './Order';
 import Vector2D from '../../../../common/Vector2D';
+import Message from '../../../../common/messages/Message';
+import * as MessageTypes from '../../../../common/messages/MessageTypes';
 
 export default class Unit extends Entity {
     public static readonly MoveTypes = {
@@ -10,14 +12,45 @@ export default class Unit extends Entity {
     public static readonly numMoveDirections:number = 8;
 
     protected _orders:Array<Order> = [];
+    protected _messages:Array<Message> = [];
+
     public nextPosition:Vector2D = new Vector2D();
     public moveType:number = Unit.MoveTypes.WALK;
-    public moveSpeed:number = 100; //units per second
+    public moveSpeed:number = 100; //units per second that this unit CAN move, if it is moving
     public moveDirection:number = -1;
     public attackRange:number = 10; //attack distance is only considered to be between the two circles the units occupy
 
+    public get hasMessages():boolean { return this._messages.length > 0; }
+
     constructor() {
         super();
+    }
+
+    /**
+     * To be called at the end of a frame, by the room.
+     * Collects all messages about this unit to be sent to its observers.
+     */
+    public getAndClearMessages():Array<Message> {
+        var ret = this._messages;
+        this._messages = [];
+        return ret;
+    }
+
+    /**
+     * Data to be presented to clients upon seeing a unit.
+     * Contains the essential information about this unit.
+     */
+    public getBasicData():any {
+        var data = {
+            id: this.id,
+            hp: this.health,
+            maxHp: this.maxHealth,
+            position: this.position.clone(),
+            direction: this.moveDirection,
+            speed: this.moveSpeed
+        }
+
+        return data;
     }
 
     public updateMovement(timeDelta:number) {
@@ -117,6 +150,6 @@ export default class Unit extends Entity {
         if (direction == this.moveDirection) return;
         this.moveDirection = direction;
 
-        //TODO: message
+        this._messages.push(new MessageTypes.UnitMoved(this.id, direction, this.position.clone()));
     }
 }

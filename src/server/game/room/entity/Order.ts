@@ -35,7 +35,7 @@ export default class Order {
      */
     public initStop()
     {
-
+        this._type = Order.types.STOP;
     }
 
     public initMoveToEntity(entityID:number)
@@ -44,6 +44,12 @@ export default class Order {
         this.targetUnitID = entityID;
     }
 
+    /**
+     * To be called potentially every frame. Not for sanitizing user input.
+     * Rather, checks that it can STILL be performed.
+     * 
+     * ex: an order to attack a unit is no longer valid if the unit dies or becomes friendly
+     */
     public checkValid():boolean {
         if (this.targetUnitID) {
             var targetUnit:Unit = this.forUnit.room.getUnitByID(this.targetUnitID) as Unit;

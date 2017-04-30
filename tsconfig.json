@@ -6,6 +6,7 @@
         "noImplicitAny": false,
         "sourceMap": false,
         "rootDir": "src",
-        "outDir": "build"
+        "outDir": "build",
+        "baseUrl": "src/"
     }
 }

@@ -26,6 +26,7 @@
     "grunt-exec": "^1.0.0",
     "mongodb": "^2.1.18",
     "mysql": "^2.12.0",
+    "sequelize": "^3.30.4",
     "typescript": "^2.1.5",
     "ws": "^1.1.0",
     "yamljs": "^0.2.8"

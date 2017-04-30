@@ -5,13 +5,24 @@ import Character from './character/Character';
 import Message from '../../common/messages/Message';
 import * as MessageTypes from '../../common/messages/MessageTypes';
 
+export interface MessageSender {
+	user:any,
+	sendMessage: (msg:Message) => void;
+	send:(str:string) => void;
+	player:Player,
+	connected:boolean
+}
+
 export default class Player {
 	private _id:number;
 	private static _idNum:number = 1;
 
+	private _serializedMessageQueue:Array<string> = [];
+
 	public game:Game = null;
-	public client:WebSocketClient = null;
+	public client:MessageSender = null;
 	public character:Character = null;
+	public isFake:boolean = false;
 
 	public get id():number {
 		return this._id;
@@ -28,6 +39,8 @@ export default class Player {
 		return -1;
 	}
 
+	public get hasMessages():boolean { return this._serializedMessageQueue.length > 0; }
+
 	public subscribedRooms:Array<Room> = []; //expected to be only 1?
 
 	constructor(game:Game) {
@@ -41,6 +54,30 @@ export default class Player {
 
 	}
 
+	/**
+	 * Queues a message to be sent at the end of the frame.
+	 */
+	public queueSerializedMessage(str:string) {
+		this._serializedMessageQueue.push(str);
+	}
+
+	/**
+	 * Sends the messages for this frame, beginning with the message describing the frame.
+	 */
+	public sendQueuedMessages(frameMessage:string) {
+		if (this.client) {
+			this.client.send(frameMessage);
+			for (var str of this._serializedMessageQueue) {
+				this.client.send(str);
+			}
+		}
+		else {
+			console.log("Player " + this.id + ": receiving messages, but no associated client!");
+		}
+
+		this._serializedMessageQueue = [];
+	}
+
 	public sendMessage(msg:Message) {
 		if (this.client) this.client.sendMessage(msg);
 	}
@@ -51,6 +88,7 @@ export default class Player {
 	}
 
 	public onUnsubscribeFromRoom(room:Room) {
+
 		this.subscribedRooms.splice(this.subscribedRooms.indexOf(room), 1);
 		this.sendMessage(new MessageTypes.RoomLeft(room.id));
 	}

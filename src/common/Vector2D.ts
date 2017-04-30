@@ -1,3 +1,5 @@
+import * as Util from './Util';
+
 export default class Vector2D {
 	constructor (
 		public x:number = 0,
@@ -101,8 +103,21 @@ export default class Vector2D {
 		return [this.x, this.y];
 	}
 
-	public static polar(angle:number, distance:number) {
+	public static polar(angle:number, distance:number):Vector2D {
 		return new Vector2D(0, 0).offset(angle, distance);
+	}
+
+	public static fromArray(arr:Array<any>):Vector2D {
+		if (Util.isCoordinate(arr)) return Vector2D.fromArrayUnchecked(arr);
+
+		console.log("Vector2D: invalid array");
+		console.log(arr);
+
+		return new Vector2D();
+	}
+
+	public static fromArrayUnchecked(arr:Array<any>):Vector2D {
+		return new Vector2D(arr[0], arr[1]);
 	}
 
 	public static degToRad(angle:number):number {

@@ -1,3 +1,4 @@
 {
-	"typescript.check.workspaceVersion": false
+	"typescript.check.workspaceVersion": false,
+	"autoimport.filesToScan": "~/Documents/mmoo-ts/src/**/*.{ts,tsx}"
 }

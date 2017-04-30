@@ -1,14 +1,18 @@
 import Message from './Message';
 import * as Util from '../Util';
+import Vector2D from '../Vector2D';
 
-/**
- * Single-digit numbers should be reserved for very common types
- */
+//Single-digit numbers should be reserved for very common types
+////////////////////////////////////////////////////////////////////////////////
+
 export const PING = 0;
+export const UNIT_MOVED = 1; //a unit's direction has changed;
+export const UNIT_HP_CHANGED = 2;
+export const UNIT_ATTACKED = 3;
 
-/**
- * Everything else can incur the whopping 1-character payload increase
- */
+//Everything else can incur the whopping 1-character payload increase
+////////////////////////////////////////////////////////////////////////////////
+
 export const USER = 10; //login, create account, character operations
 export const CRYPTO = 11; //wraps some other message
 export const GET_REQUEST = 12; //general-purpose info retrieval (eg rsa key)
@@ -17,12 +21,20 @@ export const GAME_JOINED = 14; //also contains information about the game's stat
 export const GAME_LEFT = 15;
 export const ROOM_JOINED = 16;
 export const ROOM_LEFT = 17;
+export const FRAME = 18;
+
+//I suspect there will be many unit message types. Reserve [50,70] for
+//all but the most common unit messages
+////////////////////////////////////////////////////////////////////////////////
+
+export const UNIT_SEEN = 50; //must also contain a description of the unit
+export const UNIT_UNSEEN = 51;
 
 /**
  * Giving everything its own class makes things neat and happy. Probably.
  * This file will likely become very long, but it's basically just type checking so oh well.
  */
-var classesByType = [];
+var classesByType = {};
 
 export function getClassByType(type:number) {
 	var c = classesByType[type];
@@ -278,3 +290,96 @@ export class RoomLeft extends Message {
 	}
 }
 classesByType[ROOM_LEFT] = RoomLeft;
+
+/**
+ * A unit's direction has changed.
+ */
+export class UnitMoved extends Message {
+	constructor(
+		public unitId:number,
+		public direction:number,
+		public position:Vector2D
+	) { super(UNIT_MOVED); }
+
+	public static fromArgs(args:Array<any>):UnitMoved {
+		if (Util.isInt(args[0]) && Util.isInt(args[1]) && Util.isCoordinate(args[2])) {
+			return new UnitMoved(args[0], args[1], Vector2D.fromArrayUnchecked(args[2]));
+		}
+		return null;
+	}
+
+	public serialize():string {
+		var s = super.serialize();
+		s += JSON.stringify([this.unitId, this.direction, this.position.round()]);
+		return s;
+	}
+}
+classesByType[UNIT_MOVED] = UnitMoved;
+
+/**
+ * A unit appears or otherwise becomes visible. Contains everything a client
+ * should need to know about a unit. An additional message with more information
+ * should be sent to the unit's owner, if applicable.
+ * 
+ * Just a JSON object? This is likely to be a good data optimization target in future.
+ */
+export class UnitSeen extends Message {
+	/**
+	 * Data should be created by the Unit class.
+	 */
+	constructor(
+		public data:any
+	) { super(UNIT_SEEN); }
+
+	public static fromArgs(args:Array<any>):UnitSeen {
+		if (args.length == 1) {
+			return new UnitSeen(args[0]);
+		}
+		return null;
+	}
+
+	public serialize():string {
+		return super.serialize() + JSON.stringify([this.data]);
+	}
+}
+classesByType[UNIT_SEEN] = UnitSeen;
+
+/**
+ * Player can no longer see this unit, for whatever reason.
+ */
+export class UnitUnseen extends Message {
+	constructor (
+		public unitId:number
+	) { super(UNIT_UNSEEN); }
+
+	public static fromArgs(args:Array<any>):UnitUnseen {
+		if (Util.isInt(args[0])) {
+			return new UnitUnseen(args[0]);
+		}
+		return null;
+	}
+
+	public serialize():string {
+		return super.serialize() + JSON.stringify([this.unitId]);
+	}
+}
+classesByType[UNIT_UNSEEN] = UnitUnseen;
+
+export class Frame extends Message {
+	constructor (
+		public frameId:number,
+		public time:number
+	) { super(FRAME); }
+
+	public static fromArgs(args:Array<any>):Frame {
+		if (Util.isInt(args[0]) && Util.isNumber(args[1])) {
+			return new Frame(args[0], args[1]);
+		}
+		return null;
+	}
+
+	public serialize():string {
+		return super.serialize() + JSON.stringify([this.frameId, this.time]);
+	}
+}
+classesByType[FRAME] = Frame;
