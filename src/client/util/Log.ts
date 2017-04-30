@@ -4,6 +4,7 @@
 var types: Object = {};
 
 var isEdge: boolean = (function () {
+      if (!window.clientInformation) return false; //gee thanks firefox
       if (window.clientInformation.appVersion && window.clientInformation.appVersion.indexOf("Edge") != -1) return true;
       if (window.clientInformation.userAgent && window.clientInformation.userAgent.indexOf("Edge") != -1) return true;
       return false;
