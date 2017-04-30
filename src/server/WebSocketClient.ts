@@ -65,6 +65,7 @@ export default class WebSocketClient {
 			this._socket.send(msg);
 		} catch (e) {
 			console.error("WS SEND ERROR: " + e.toString());
+			console.log("To Client " + this.id + ": " + msg);
 		}
 	}
 

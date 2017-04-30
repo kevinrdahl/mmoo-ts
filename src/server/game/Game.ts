@@ -9,8 +9,6 @@ import * as MessageTypes from '../../common/messages/MessageTypes';
 import IDObjectGroup from '../../common/IDObjectGroup';
 
 export default class Game {
-	protected static _idNum:number = 0;
-
 	protected _id:number;
 	protected _rooms:IDObjectGroup<Room> = new IDObjectGroup<Room>();
 	protected _players:IDObjectGroup<Player> = new IDObjectGroup<Player>();
@@ -31,9 +29,8 @@ export default class Game {
 	public get timeSinceStart():number { return this._currentUpdateTime - this._firstUpdateTime; }
 	public get characterManager():CharacterManager { return this._characterManager; }
 
-	constructor() {
-		this._id = Game._idNum;
-		Game._idNum += 1;
+	constructor(id:number) {
+		this._id = id
 	}
 
 	public getSummary():Object {
@@ -138,14 +135,25 @@ export default class Game {
 
 		client.sendMessage(new MessageTypes.GameJoined(this._id, this._currentFrame, this._updateInterval));
 
-		//TODO: add player to vision handler
+		//add player to room
+		var room:Room = this.getPlayerRoom(player);
+		room.addPlayer(player);
+		//since the player has a character, the room will take care of creating a unit for it
+	}
+
+	/**
+	 * Gets the room to which the player should be added.
+	 */
+	protected getPlayerRoom(player:Player):Room {
+		return this._rooms.list[0];
 	}
 
 	/**
 	 * Called when the player's WebSocketClient disconnects.
 	 */
 	public onPlayerDisconnect(player:Player) {
-
+		console.log("Player " + player.debugString + " disconnected.");
+		player.leaveAllRooms();
 	}
 
 	/**

@@ -85,6 +85,7 @@ export default class LoginMenu extends InterfaceElement {
 		var passwordField:TextField = this.getElementById("passwordField") as TextField;
 
 		console.log("LOGIN as " + userNameField.text + "#" + passwordField.text);
+		Game.instance.loginManager.login(userNameField.text, passwordField.text);
 	}
 
 	public onClickRegister = (e:GameEvent) => {

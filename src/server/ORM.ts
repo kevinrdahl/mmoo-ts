@@ -59,7 +59,7 @@ export default class ORM {
 				name: { type:S.STRING(50), field:'name' },
 				properties: { type:S.TEXT, field:'properties' },
 				userId: { type:S.INTEGER.UNSIGNED, field:'user_id' },
-				worldId: { type:S.INTEGER.UNSIGNED, field:'world_id' }
+				gameId: { type:S.INTEGER.UNSIGNED, field:'game_id' }
 			},
 			{
 				freezeTableName: true,
@@ -73,7 +73,7 @@ export default class ORM {
 		this.World = this.sql.define(
 			'World',
 			{
-				id: { type:S.INTEGER.UNSIGNED, field:'world_id', primaryKey:true, autoIncrement:true },
+				id: { type:S.INTEGER.UNSIGNED, field:'game_id', primaryKey:true, autoIncrement:true },
 				name: { type:S.STRING(50), field:'name' },
 				host: { type:S.STRING(250), field:'host' },
 				wsPort: { type:S.INTEGER.UNSIGNED, field:'ws_port' },

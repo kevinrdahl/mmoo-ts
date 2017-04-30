@@ -3,6 +3,7 @@ import Order from './Order';
 import Vector2D from '../../../../common/Vector2D';
 import Message from '../../../../common/messages/Message';
 import * as MessageTypes from '../../../../common/messages/MessageTypes';
+import Character from '../../character/Character';
 
 export default class Unit extends Entity {
     public static readonly MoveTypes = {
@@ -19,11 +20,18 @@ export default class Unit extends Entity {
     public moveSpeed:number = 100; //units per second that this unit CAN move, if it is moving
     public moveDirection:number = -1;
     public attackRange:number = 10; //attack distance is only considered to be between the two circles the units occupy
+    public characterId:number = -1;
+    public name:string = "Unit";
 
     public get hasMessages():boolean { return this._messages.length > 0; }
 
     constructor() {
         super();
+    }
+
+    public initForCharacter(character:Character) {
+        this.characterId = character.id;
+        this.name = character.name;
     }
 
     /**
@@ -43,11 +51,13 @@ export default class Unit extends Entity {
     public getBasicData():any {
         var data = {
             id: this.id,
+            name:this.name,
             hp: this.health,
             maxHp: this.maxHealth,
             position: this.position.clone(),
             direction: this.moveDirection,
-            speed: this.moveSpeed
+            speed: this.moveSpeed,
+            characterId: this.characterId
         }
 
         return data;
@@ -70,7 +80,7 @@ export default class Unit extends Entity {
     }
 
     public updateAction(timeDelta:number) {
-        
+
     }
 
     public addOrder(order:Order, clearQueue:boolean) {

@@ -161,6 +161,7 @@ export default class Game {
 
 			default:
 				console.log("Received unhandled message from server:" + message.serialize());
+				console.log(message);
 		}
 	}
 
@@ -236,7 +237,5 @@ export default class Game {
 		this.interfaceRoot.addChild(mainMenu);
 		mainMenu.attachToParent(AttachInfo.Center);
 		mainMenu.showMenu("login");
-
-		this.loginManager.login("testy", "abc123");
 	}
 }

@@ -10,6 +10,8 @@ import Connection from './Connection';
 export default class LoginManager {
 	public userId:number = -1;
 	public userName:string = "Naebdy!";
+	public gameId:number = -1;
+	public characterId:number = -1;
 
 	public get userString():string { return "User " + this.userId + " (" + this.userName + ")"; }
 
@@ -18,7 +20,7 @@ export default class LoginManager {
 	}
 
 	public login(name:string, pass:string) {
-		var msg:MessageTypes.UserMessage = new MessageTypes.UserMessage("login", {
+		var msg:Message = new MessageTypes.UserMessage("login", {
 			name:name,
 			pass:pass
 		});
@@ -27,7 +29,7 @@ export default class LoginManager {
 	}
 
 	public createUser(name:string, pass:string, loginOnSuccess:boolean = false) {
-		var msg:MessageTypes.UserMessage = new MessageTypes.UserMessage("createUser", {
+		var msg:Message = new MessageTypes.UserMessage("createUser", {
 			name:name,
 			pass:pass
 		});
@@ -55,11 +57,18 @@ export default class LoginManager {
 				console.log("Failed to create user: " + msg.failReason);
 			}
 		}
-		else if (msg.action == "joinGame") {
+		else if (msg.action == "getCharacters") {
 			if (msg.success) {
-				Game.instance.onJoinGame(params["id"]);
+				this.onGetCharacterList(params["characters"]);
 			} else {
-				console.log("Failed to join game: " + msg.failReason);
+				console.log("Failed to get character list: " + msg.failReason);
+			}
+		}
+		else if (msg.action == "enterGame") {
+			if (msg.success) {
+				this.onEnterGame(params["characters"]);
+			} else {
+				console.log("Failed to get character list: " + msg.failReason);
 			}
 		}
 	}
@@ -67,10 +76,67 @@ export default class LoginManager {
 	private onLogin() {
 		console.log("Logged in as " + this.userString);
 
-		Game.instance.connection.getRequest("games", {}, function(response) {
-			if (response && Util.isArray(response)) {
-				console.log("Current games:\n" + JSON.stringify(response));
+		Game.instance.connection.getRequest("games", {}, this.onGetGamesList);
+	}
+
+	/**
+	 * Assumes response is a JSON array.
+	 * Why did I implement this as an async thing?
+	 */
+	private onGetGamesList = (response) => {
+		if (response && Util.isArray(response)) {
+			console.log("Current games:\n" + JSON.stringify(response));
+
+			var games:Array<any> = response as Array<any>;
+			if (games.length > 0) {
+				//log in to the first thing in the list!
+				this.getCharacterList(games[0].id);
+			} else {
+				console.warn("No games?");
 			}
-		})
+		}
+	}
+
+	/**
+	 * Also, internally, expresses an intent to join this game
+	 */
+	private getCharacterList(gameId:number) {
+		this.gameId = gameId;
+
+		var msg:Message = new MessageTypes.UserMessage("getCharacters", {
+			gameId: gameId
+		});
+		Game.instance.connection.sendMessage(msg);
+	}
+
+	private onGetCharacterList(response) {
+		if (Util.isArray(response)) {
+			var characters:Array<any> = response as Array<any>;
+			if (characters.length > 0) {
+				//log in as the first thing in the list!
+				this.enterGameAsCharacter(this.gameId, characters[0].id);
+			} else {
+				console.log("No characters!")
+			}
+		}
+		else {
+			console.warn("Bad character data?")
+			console.log(response);
+		}
+	}
+
+	private enterGameAsCharacter(gameId:number, characterId:number) {
+		this.gameId = gameId;
+		this.characterId = characterId;
+
+		var msg:Message = new MessageTypes.UserMessage("enterGame", {
+			gameId: gameId,
+			characterId: characterId
+		});
+		Game.instance.connection.sendMessage(msg);
+	}
+
+	private onEnterGame(response) {
+
 	}
 }

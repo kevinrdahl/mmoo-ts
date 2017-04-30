@@ -1,5 +1,6 @@
 import * as Util from '../../../common/Util';
 import Player from '../Player';
+import Unit from '../room/entity/Unit';
 
 var acceptedCreateCharacterProperties:Object = {
 	"appearance":true
@@ -28,6 +29,7 @@ export default class Character {
 	}
 
 	public player:Player = null;
+	public unit:Unit = null;
 
 	constructor(data:any = null) {
 		if (data) {

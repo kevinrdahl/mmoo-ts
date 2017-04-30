@@ -13,10 +13,8 @@ import GameEvent from '../events/GameEvent';
 export default class InputManager {
 	public dragThreshold:number = 8;
 
-	private static _instance:InputManager = null;
+	private static _instance:InputManager = new InputManager();
 	public static get instance():InputManager {
-		if (InputManager._instance) return InputManager._instance;
-		InputManager._instance = new InputManager();
 		return InputManager._instance;
 	}
 

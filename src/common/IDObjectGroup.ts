@@ -24,7 +24,7 @@ export default class IDObjectGroup<T extends IDObject> {
 		if (this._map.hasOwnProperty(obj.id.toString())) return false;
 
 		this.list.push(obj);
-		this._map[obj.id.toString()] = true;
+		this._map[obj.id.toString()] = obj;
 
 		return true;
 	}

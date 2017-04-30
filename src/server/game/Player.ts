@@ -39,6 +39,15 @@ export default class Player {
 		return -1;
 	}
 
+	public get debugString():string {
+		var s:string = "Player " + this.id;
+		if (this.user) {
+			s += " (User " + this.user.id + ": " + this.user.name + ")";
+		}
+
+		return s;
+	}
+
 	public get hasMessages():boolean { return this._serializedMessageQueue.length > 0; }
 
 	public subscribedRooms:Array<Room> = []; //expected to be only 1?
@@ -80,6 +89,12 @@ export default class Player {
 
 	public sendMessage(msg:Message) {
 		if (this.client) this.client.sendMessage(msg);
+	}
+
+	public leaveAllRooms() {
+		for (var room of this.subscribedRooms) {
+			room.removePlayer(this);
+		}
 	}
 
 	public onSubscribeToRoom(room:Room) {

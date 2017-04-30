@@ -135,10 +135,29 @@ export default class Room extends GenericManager {
 		//handle vision?
 	}
 
-	protected subscribePlayer(player:Player) {
+	public addPlayer(player:Player) {
+		var subscribed:boolean = this.subscribePlayer(player);
+
+		if (subscribed && player.character) {
+			var unit:Unit = new Unit();
+			unit.initForCharacter(player.character);
+			this.addUnit(unit, new Vector2D(unit.id * 50)); //wow, truly excellent (TODO)
+			player.character.unit = unit;
+		}
+	}
+
+	public removePlayer(player:Player) {
+		this.unsubscribePlayer(player);
+
+		if (player.character && player.character.unit) {
+			this.removeUnit(player.character.unit);
+		}
+	}
+
+	protected subscribePlayer(player:Player):boolean {
 		if (!player.user) {
 			this.log("player has no user. Not subscribing them.");
-			return;
+			return false;
 		}
 
 		var changed:boolean = this._subscribedPlayers.add(player);
@@ -151,13 +170,15 @@ export default class Room extends GenericManager {
 				player.queueSerializedMessage(seeMessage.serialize());
 			}
 		}
+
+		return changed;
 	}
 
 	protected unsubscribePlayer(player:Player) {
 		var changed:boolean = this._subscribedPlayers.remove(player);
 
 		if (changed) {
-			player.onSubscribeToRoom(this);
+			player.onUnsubscribeFromRoom(this);
 		}
 	}
 

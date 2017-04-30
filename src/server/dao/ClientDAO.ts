@@ -54,14 +54,14 @@ export default class ClientDAO {
 
 	// === Character ===
 
-	public checkIfCharacterExists(name:string, worldId:number, callback:(operation:DAOOperation)=>void) {
-		var operation:DAOOperation = new DAOOperation("checkIfCharacterExists", {name:name, worldId:worldId}, callback);
+	public checkIfCharacterExists(name:string, gameId:number, callback:(operation:DAOOperation)=>void) {
+		var operation:DAOOperation = new DAOOperation("checkIfCharacterExists", {name:name, gameId:gameId}, callback);
 		this.enqueueOperation(operation);
 	}
 
 	public getCharacterList(userId:number, gameId:number, callback:(operation:DAOOperation)=>void) {
 		var operation:DAOOperation = new DAOOperation(
-			"getCharacterList",
+			"getCharacters",
 			{userId:userId, gameId:gameId},
 			callback
 		);
@@ -77,8 +77,8 @@ export default class ClientDAO {
 		this.enqueueOperation(operation);
 	}
 
-	public createCharacter(userId:number, worldId:number, name:string, properties:any, callback:(operation:DAOOperation)=>void) {
-		this.checkIfCharacterExists(name, worldId, (operation:DAOOperation) => {
+	public createCharacter(userId:number, gameId:number, name:string, properties:any, callback:(operation:DAOOperation)=>void) {
+		this.checkIfCharacterExists(name, gameId, (operation:DAOOperation) => {
 			if (operation.result > 0) {
 				operation.success = false;
 				operation.failReason = "Character '" + operation.data.name + "' already exists.";
@@ -86,7 +86,7 @@ export default class ClientDAO {
 			} else {
 				var createOperation:DAOOperation = new DAOOperation(
 					"createCharacter",
-					{userId:userId, worldId:worldId, name:name, properties:properties},
+					{userId:userId, gameId:gameId, name:name, properties:properties},
 					callback
 				)
 				this.enqueueOperation(createOperation);
@@ -110,6 +110,8 @@ export default class ClientDAO {
 		var operation = this._operationQueue[0];
 		var orm:ORM = this._orm;
 		var __this = this;
+
+		//console.log("Client DAO Operation: " + JSON.stringify(operation));
 
 		switch (operation.type) {
 			case "checkIfUserExists":
@@ -157,7 +159,7 @@ export default class ClientDAO {
 				orm.Character.count({
 					where: {
 						name: operation.data.name,
-						worldId: operation.data.worldId
+						gameId: operation.data.gameId
 					}
 				}).then(function(count) {
 					__this.onQueryResult(null, count);
@@ -167,7 +169,7 @@ export default class ClientDAO {
 
 				break;
 
-			case "getCharacterList":
+			case "getCharacters":
 				orm.Character.findAll({
 					where: {
 						userId: operation.data.userId,
@@ -185,7 +187,7 @@ export default class ClientDAO {
 				var character = orm.Character.build({
 					name: operation.data.name,
 					userId: operation.data.userId,
-					worldId: operation.data.worldId,
+					gameId: operation.data.gameId,
 					properties: operation.data.properties
 				});
 
@@ -207,6 +209,8 @@ export default class ClientDAO {
 				}).catch(function(e) {
 					__this.onQueryResult(e, null);
 				});
+
+				break;
 		}
 	}
 
@@ -217,11 +221,18 @@ export default class ClientDAO {
 	protected onQueryResult (err, result) {
 		var operation = this._operationQueue.shift();
 
+		if (!operation) {
+			console.error("onQueryResult: NO OPERATION?!");
+		}
+
 		if (err) {
 			var dbErr:string = "Database error: " + err;
 			console.error(dbErr);
-			operation.success = false;
-			operation.failReason = dbErr;
+
+			if (operation) {
+				operation.success = false;
+				operation.failReason = dbErr;
+			}
 		}
 		else {
 			switch (operation.type) {
@@ -248,7 +259,7 @@ export default class ClientDAO {
 					}
 					break;
 
-				case "getCharacterList":
+				case "getCharacters":
 					operation.success = true;
 					operation.result = result.map(function(char) {
 						return {
@@ -271,7 +282,9 @@ export default class ClientDAO {
 			}
 		}
 
-		operation.callback(operation);
+		if (operation) {
+			operation.callback(operation);
+		}
 
 		if (this._operationQueue.length > 0) {
 			this.performOperation();

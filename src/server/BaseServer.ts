@@ -44,7 +44,7 @@ export default class BaseServer {
 	}
 
 	public isDAOOperationAllowed(opName:string):boolean {
-		return (this._allowedDAOOperations[opName] === true);
+		return (this._allowedDAOOperations[opName] === true || this._allowedDAOOperations["*"] === true);
 	}
 
 	protected onReady() {
@@ -108,12 +108,9 @@ export default class BaseServer {
 	}
 
 	protected onWebSocketConnect = (webSocket:WebSocket) => {
-		var __this = this;
 		var client:WebSocketClient = new WebSocketClient(webSocket, this);
 		client.onMessage = this.onClientMessage;
-		client.onDisconnect = function() {
-			__this.onClientDisconnect;
-		}
+		client.onDisconnect = this.onClientDisconnectWrapper;
 
 		this._wsClients[client.id] = client;
 
@@ -122,6 +119,10 @@ export default class BaseServer {
 
 	protected onClientMessage = (client:WebSocketClient, msg:string) => {
 		//console.log(client.id + ": " + msg);
+	}
+
+	protected onClientDisconnectWrapper = (client: WebSocketClient) => {
+		this.onClientDisconnect(client);
 	}
 
 	protected onClientDisconnect(client:WebSocketClient) {

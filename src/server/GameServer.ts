@@ -12,6 +12,7 @@ export default class GameServer extends BaseServer {
 	constructor(settingsPath:string) {
 		super(settingsPath);
 		this._allowedDAOOperations['createUser'] = true;
+		this._allowedDAOOperations['*'] = true;
 	}
 
 	public getGameById(id:number):Game {
@@ -50,7 +51,7 @@ export default class GameServer extends BaseServer {
 	protected onReady() {
 		super.onReady();
 
-		var game:Game = new Game();
+		var game:Game = new Game(1);
 		this._games.push(game);
 		game.start();
 	}
