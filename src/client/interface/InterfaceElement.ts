@@ -199,11 +199,6 @@ export default class InterfaceElement extends GameEventHandler {
 		this.resize(w, h);
 	}
 
-	//Used by Game to add the root element, shouldn't be used elsewhere
-	public addToContainer(container:PIXI.Container) {
-		container.addChild(this._displayObject);
-	}
-
 	public addChild(child:InterfaceElement) {
 		this._children.push(child);
 		this._displayObject.addChild(child._displayObject);
@@ -289,7 +284,12 @@ export default class InterfaceElement extends GameEventHandler {
 		this._attach = null;
 	}
 
-	public resizeToParent(info:ResizeInfo) {
+	/**
+	 * 
+	 * @param info If null, fills the parent completely
+	 */
+	public resizeToParent(info:ResizeInfo = null) {
+		if (info == null) info = ResizeInfo.get(1, 1, 0, 0);
 		this._resize = info;
 		this.onParentResize();
 	}

@@ -12,6 +12,7 @@ import SoundManager from './sound/SoundManager';
 //import SoundAssets = require('./sound/SoundAssets');
 import * as SoundAssets from './sound/SoundAssets';
 
+import InterfaceRoot from './interface/prefabs/InterfaceRoot';
 import InterfaceElement from './interface/InterfaceElement';
 import Panel from './interface/Panel';
 import TextElement from './interface/TextElement';
@@ -34,7 +35,7 @@ export default class Game {
 	public viewDiv:HTMLElement = null;
 	public viewWidth: number = 500;
 	public viewHeight: number = 500;
-	public interfaceRoot: InterfaceElement;
+	public interfaceRoot: InterfaceRoot;
 	public textureLoader: TextureLoader;
 	public debugGraphics: PIXI.Graphics;
 	public connection: Connection;
@@ -80,10 +81,12 @@ export default class Game {
 
 		//Add root UI element
 		InterfaceElement.maskTexture = TextureGenerator.simpleRectangle(null, 8, 8, 0xffffff, 0,);
-		this.interfaceRoot = new InterfaceElement();
+		/*this.interfaceRoot = new InterfaceElement();
 		this.interfaceRoot.id = "root";
 		this.interfaceRoot.name = "root";
-		this.interfaceRoot.addToContainer(this.stage);
+		this.interfaceRoot.addToContainer(this.stage);*/
+		this.interfaceRoot = new InterfaceRoot(this.stage);
+
 
 		//Set up InputManager
 		InputManager.instance.init("#viewDiv");
@@ -234,7 +237,7 @@ export default class Game {
 		this.interfaceRoot.removeChild(loadingText);
 
 		var mainMenu:MainMenu = new MainMenu();
-		this.interfaceRoot.addChild(mainMenu);
+		this.interfaceRoot.addDialog(mainMenu);
 		mainMenu.attachToParent(AttachInfo.Center);
 		mainMenu.showMenu("login");
 	}
