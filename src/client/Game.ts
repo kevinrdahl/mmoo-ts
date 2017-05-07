@@ -20,12 +20,14 @@ import ElementList from './interface/ElementList';
 import AttachInfo from './interface/AttachInfo';
 import MainMenu from './interface/prefabs/MainMenu';
 import InputManager from './interface/InputManager';
-import GameView from './GameView';
+import GameEvent from './events/GameEvent';
+import GameEventHandler from './events/GameEventHandler';
+import Room from './room/Room';
 
 import * as MessageTypes from '../common/messages/MessageTypes';
 import Message from '../common/messages/Message';
 
-export default class Game {
+export default class Game extends GameEventHandler {
 	public static instance: Game = null;
 	public static useDebugGraphics: boolean = false;
 
@@ -42,16 +44,26 @@ export default class Game {
 	public textureWorker: TextureWorker;
 	public loginManager:LoginManager = new LoginManager();
 
-	public gameView:GameView = new GameView();
-	public joinedGameId:number = -1;
-
 	get volatileGraphics(): PIXI.Graphics { this._volatileGraphics.clear(); return this._volatileGraphics }
 
 	/*=== PRIVATE ===*/
 	private _volatileGraphics = new PIXI.Graphics(); //to be used when drawing to a RenderTexture
 	private _documentResized: boolean = true;
+	private _gameId:number = -1;
+	private _roomId:number = -1;
+
+	private _lastDrawTime:number = 0;
+	private _currentDrawTime:number = 0;
+
+	private _room:Room = null;
+
+	public get gameId():number { return this._gameId; }
+	public get roomId():number { return this._roomId; }
+	public get inGame():boolean { return this._gameId > -1; }
+	public get inRoom():boolean { return this._roomId > -1; }
 
 	constructor(viewDiv: HTMLElement) {
+		super();
 		this.viewDiv = viewDiv;
 	}
 
@@ -81,10 +93,6 @@ export default class Game {
 
 		//Add root UI element
 		InterfaceElement.maskTexture = TextureGenerator.simpleRectangle(null, 8, 8, 0xffffff, 0,);
-		/*this.interfaceRoot = new InterfaceElement();
-		this.interfaceRoot.id = "root";
-		this.interfaceRoot.name = "root";
-		this.interfaceRoot.addToContainer(this.stage);*/
 		this.interfaceRoot = new InterfaceRoot(this.stage);
 
 		//Set up InputManager
@@ -95,19 +103,15 @@ export default class Game {
 		this.stage.addChild(this.debugGraphics);
 
 		this.connect();
-
 		this.render();
 	}
 
-	//actually seeing the game world will be relegated to ENTERING the game
-	//joining a game lets you manager characters before entering
-	public onJoinGame(gameId:number) {
-		this.joinedGameId = gameId;
-
-		//this.gameView.init(currentFrame, frameInterval);
-	}
-
 	private render() {
+		this._currentDrawTime = Date.now() / 1000;
+		if (this._lastDrawTime <= 0) this._lastDrawTime = this._currentDrawTime;
+		var timeDelta:number = this._currentDrawTime - this._lastDrawTime;
+
+
 		if (this._documentResized) {
 			this._documentResized = false;
 			this.resize();
@@ -117,9 +121,14 @@ export default class Game {
 
 		this.interfaceRoot.draw();
 
+		if (this._room) {
+			this._room.update(timeDelta);
+		}
+
 		var renderer = this.renderer as PIXI.SystemRenderer;
 		renderer.render(this.stage);
 
+		this._lastDrawTime = this._currentDrawTime;
 		requestAnimationFrame(()=>this.render());
 	}
 
@@ -158,17 +167,39 @@ export default class Game {
 				break;
 
 			case MessageTypes.GAME_JOINED:
-				this.onGameStatusMessage(message as MessageTypes.GameJoined);
+				this.onJoinGame(message as MessageTypes.GameJoined);
+				break;
+
+			case MessageTypes.ROOM_JOINED:
+				this.onJoinRoom(message as MessageTypes.RoomJoined);
 				break;
 
 			default:
-				console.log("Received unhandled message from server:" + message.serialize());
-				console.log(message);
+				if (this._room) {
+					this._room.onMessage(message);
+				} else {
+					console.log("Received unhandled message from server:" + message.serialize());
+					console.log(message);
+				}
 		}
 	}
 
-	private onGameStatusMessage(message:MessageTypes.GameJoined) {
+	private onJoinGame(message:MessageTypes.GameJoined) {
+		this._gameId = message.gameId;
+	}
 
+	private onJoinRoom(message:MessageTypes.RoomJoined) {
+		this._roomId = message.roomId;
+		this.removeMainMenu();
+
+		if (this._room) {
+			this._room.cleanup();
+			this.stage.removeChild(this._room.container);
+		}
+
+		this._room = new Room();
+		this._room.init(message.roomId);
+		this.stage.addChildAt(this._room.container, 0);
 	}
 
 	private onConnectionError(e:Event) {
@@ -239,5 +270,13 @@ export default class Game {
 		this.interfaceRoot.addDialog(mainMenu);
 		mainMenu.attachToParent(AttachInfo.Center);
 		mainMenu.showLogin();
+	}
+
+	private removeMainMenu() {
+		var mainMenu:InterfaceElement = this.interfaceRoot.getElementByFunction(function(element:InterfaceElement) {
+			return element instanceof MainMenu;
+		});
+
+		if (mainMenu) mainMenu.removeSelf();
 	}
 }

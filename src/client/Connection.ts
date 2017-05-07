@@ -85,7 +85,7 @@ export default class Connection {
     };
 
     private onSocketMessage = (message:MessageEvent) => {
-        Log.log("connRecv", message.data);
+        //Log.log("connRecv", message.data);
         var parsedMessage:Message = Message.parse(message.data);
 
         if (parsedMessage) {

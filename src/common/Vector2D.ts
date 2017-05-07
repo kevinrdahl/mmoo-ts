@@ -89,6 +89,7 @@ export default class Vector2D {
 	}
 
 	public angleTo(other:Vector2D):number {
+		if (!other) return 0;
 		return Vector2D.radToDeg(Math.atan2(other.y - this.y, other.x - this.x));
 	}
 

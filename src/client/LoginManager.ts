@@ -6,8 +6,10 @@ import Message from '../common/messages/Message';
 
 import Game from './Game';
 import Connection from './Connection';
+import GameEvent from './events/GameEvent';
+import GameEventHandler from './events/GameEventHandler';
 
-export default class LoginManager {
+export default class LoginManager extends GameEventHandler {
 	public userId:number = -1;
 	public userName:string = "Naebdy!";
 	public gameId:number = -1;
@@ -16,7 +18,7 @@ export default class LoginManager {
 	public get userString():string { return "User " + this.userId + " (" + this.userName + ")"; }
 
 	constructor() {
-
+		super();
 	}
 
 	public login(name:string, pass:string) {
@@ -68,7 +70,7 @@ export default class LoginManager {
 			if (msg.success) {
 				this.onEnterGame(params["characters"]);
 			} else {
-				console.log("Failed to get character list: " + msg.failReason);
+				console.log("Failed to get enter game: " + msg.failReason);
 			}
 		}
 	}
@@ -137,6 +139,7 @@ export default class LoginManager {
 	}
 
 	private onEnterGame(response) {
-
+		console.log("Entered game!")
+		console.log(response);
 	}
 }

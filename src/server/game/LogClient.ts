@@ -14,6 +14,8 @@ export default class LogClient {
 
     public send(str:string) {
         console.log("[LOG] " + this.name + ": " + str);
+        /*var msg:Message = Message.parse(str);
+        console.log(msg);*/
     }
 
     public sendMessage(msg:Message) {

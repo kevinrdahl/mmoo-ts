@@ -52,7 +52,7 @@ export default class InterfaceRoot extends InterfaceElement {
          return super.getElementAtPoint(point);
     }
 
-    private getLayer(name:string):InterfaceElement {
+    public getLayer(name:string):InterfaceElement {
         var layer:InterfaceElement = this.layers[name];
         if (!layer) return null;
 
@@ -75,7 +75,7 @@ export default class InterfaceRoot extends InterfaceElement {
         this.getLayer(InterfaceRoot.LayerNames.popups).addChild(element);
     }
 
-    public showWarningPopup(message: string, title: string = null, onClose:()=>void = null) {
+    public showWarningPopup(message: string, title: string = null, onClose:()=>void = null):InterfaceElement {
         var dialog:GenericListDialog = new GenericListDialog(200, 10);
         if (title) dialog.addMediumTitle(title, 0);
         dialog.addMessage(message, 5);
@@ -92,5 +92,19 @@ export default class InterfaceRoot extends InterfaceElement {
         this.addPopup(dialog);
         dialog.attachToParent(AttachInfo.Center);
         InputManager.instance.focus(null);
+
+        return dialog;
+    }
+
+    public showStatusPopup(status: string):InterfaceElement {
+        var dialog: GenericListDialog = new GenericListDialog(200, 10);
+        dialog.addMediumTitle(status);
+        dialog.finalize();
+
+        this.addPopup(dialog);
+        dialog.attachToParent(AttachInfo.Center);
+        InputManager.instance.focus(null);
+
+        return dialog;
     }
 }

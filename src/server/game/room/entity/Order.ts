@@ -47,11 +47,11 @@ export default class Order {
     /**
      * To be called potentially every frame. Not for sanitizing user input.
      * Rather, checks that it can STILL be performed.
-     * 
+     *
      * ex: an order to attack a unit is no longer valid if the unit dies or becomes friendly
      */
     public checkValid():boolean {
-        if (this.targetUnitID) {
+        if (this.targetUnitID >= 0) {
             var targetUnit:Unit = this.forUnit.room.getUnitByID(this.targetUnitID) as Unit;
             if (targetUnit == null) return false;
             if (this.type == Order.types.ATTACK && !targetUnit.isAlive) return false;
@@ -82,11 +82,11 @@ export default class Order {
 
     public getMoveTarget():Vector2D {
         if (this.targetPoint) return this.targetPoint;
-        
+
         if (this.targetUnitID) {
             var targetUnit:Unit = this.forUnit.room.getUnitByID(this.targetUnitID) as Unit;
             var dist:number = 0;
-            
+
             if (this._type == Order.types.ATTACK) {
                 dist = this.forUnit.getMaxDistanceToAttackEntity(targetUnit);
             }

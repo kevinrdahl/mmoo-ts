@@ -8,6 +8,7 @@ import Vector2D from '../../../common/Vector2D';
 import Message from '../../../common/messages/Message';
 import * as MessageTypes from '../../../common/messages/MessageTypes';
 import LogClient from '../LogClient';
+import Order from './entity/Order';
 
 /**
  * Think of it as a room in a typical dungeon crawl: completely self-contained but connects to other rooms.
@@ -48,18 +49,38 @@ export default class Room extends GenericManager {
 		this.addUnit(unit, unit.position);
 
 		//make a fake player, for logging (TODO: have these spit out log files)
-		this._logPlayer = new Player(this._game);
+		/*this._logPlayer = new Player(this._game);
 		var logClient:LogClient = new LogClient(this.name);
 		logClient.user = {
 			id: -1,
 			name: "Logger"
 		};
 		this._logPlayer.client = logClient;
-		this.subscribePlayer(this._logPlayer);
+		this.subscribePlayer(this._logPlayer);*/
 	}
+
+	//some temp nonsense for move testing
+	private timeSinceMove:number = 0;
+	private moveInterval:number = 5;
 
 	public update(timeDelta:number)
 	{
+		this.timeSinceMove += timeDelta;
+		if (this.timeSinceMove > this.moveInterval) {
+			this.timeSinceMove = 0;
+
+			for (var unit of this._units.list) {
+				var dest:Vector2D = new Vector2D();
+				dest.x = Math.round(Math.random() * 300);
+				dest.y = Math.round(Math.random() * 300);
+
+				var order:Order = new Order();
+				order.initMove(dest);
+
+				unit.addOrder(order, true);
+			}
+		}
+
 		//console.log(this.name + ": update " + timeElapsed);
 		for (var unit of this._units.list) {
 			unit.updateMovement(timeDelta);
@@ -117,6 +138,7 @@ export default class Room extends GenericManager {
 	public addUnit(unit:Unit, position:Vector2D) {
 		unit.position.set(position);
 		unit.nextPosition.set(position);
+		unit.room = this;
 
 		this._units.add(unit);
 		//figure out how vision is going to work!

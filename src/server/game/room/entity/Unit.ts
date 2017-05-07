@@ -10,14 +10,14 @@ export default class Unit extends Entity {
         NONE: 0,
         WALK: 1
     }
-    public static readonly numMoveDirections:number = 8;
+    public static readonly numMoveDirections:number = 16;
 
     protected _orders:Array<Order> = [];
     protected _messages:Array<Message> = [];
 
     public nextPosition:Vector2D = new Vector2D();
     public moveType:number = Unit.MoveTypes.WALK;
-    public moveSpeed:number = 100; //units per second that this unit CAN move, if it is moving
+    public moveSpeed:number = 50; //units per second that this unit CAN move, if it is moving
     public moveDirection:number = -1;
     public attackRange:number = 10; //attack distance is only considered to be between the two circles the units occupy
     public characterId:number = -1;
@@ -63,6 +63,7 @@ export default class Unit extends Entity {
         return data;
     }
 
+
     public updateMovement(timeDelta:number) {
         this.checkOrders();
 
@@ -71,6 +72,7 @@ export default class Unit extends Entity {
 
             if (order.checkMoveNeeded()) {
                 var dest:Vector2D = order.getMoveTarget();
+
                 var complete:boolean = this.stepToPoint(dest, timeDelta);
                 if (complete) {
                     this.orderCompleted();
@@ -79,8 +81,11 @@ export default class Unit extends Entity {
         }
     }
 
+    /**
+     * Also updates position, after movement
+     */
     public updateAction(timeDelta:number) {
-
+        this.position.set(this.nextPosition);
     }
 
     public addOrder(order:Order, clearQueue:boolean) {
@@ -134,14 +139,17 @@ export default class Unit extends Entity {
      * Moves toward dest, and returns true if the unit has reached it
      */
     private stepToPoint(dest:Vector2D, timeDelta:number):boolean {
-        if (this.position.withinDistance(dest, this.moveSpeed)) {
+        if (this.position.withinDistance(dest, this.moveSpeed * timeDelta)) {
             this.nextPosition.set(dest);
-            this.setDirection(-1); //stop
+            this.setDirection(-1, true); //stop
             return true;
         }
 
-        var direction:number = Unit.getDirection(this.position.angleTo(dest));
-        this.nextPosition.set(this.position).offset(direction * (360 / Unit.numMoveDirections), this.moveSpeed * timeDelta);
+        var direction:number = Unit.getDirectionIndex(this.position.angleTo(dest));
+        var offsetAngle: number = direction * (360 / Unit.numMoveDirections);
+        var offsetAmount: number = this.moveSpeed * timeDelta;
+
+        this.nextPosition.set(this.position).offset(offsetAngle, offsetAmount);
         this.setDirection(direction);
         return false;
     }
@@ -149,17 +157,19 @@ export default class Unit extends Entity {
     /**
      * Gets the integer direction to move, based on the number of allowed directions
      */
-    private static getDirection(angle):number {
-        return Math.floor(((angle + 360) % 360) / Unit.numMoveDirections);
+    private static getDirectionIndex(angle:number):number {
+        angle = (angle + 360) % 360;
+        var ret = Math.floor(angle / (360 / Unit.numMoveDirections));
+        return ret;
     }
 
     /**
      * This is the direction index, for messaging changes in direction
      */
-    private setDirection(direction:number) {
-        if (direction == this.moveDirection) return;
+    private setDirection(direction:number, force:boolean = false) {
+        if (direction == this.moveDirection && !force) return;
         this.moveDirection = direction;
 
-        this._messages.push(new MessageTypes.UnitMoved(this.id, direction, this.position.clone()));
+        this._messages.push(new MessageTypes.UnitMoved(this.id, direction, this.nextPosition.clone()));
     }
 }

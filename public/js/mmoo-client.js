@@ -23,7 +23,7 @@ var Connection = (function () {
             _this.onError(e);
         };
         this.onSocketMessage = function (message) {
-            Log.log("connRecv", message.data);
+            //Log.log("connRecv", message.data);
             var parsedMessage = Message_1.default.parse(message.data);
             if (parsedMessage) {
                 if (parsedMessage.type == MessageTypes.GET_RESPONSE) {
@@ -87,10 +87,15 @@ Connection.getRequestId = 0;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Connection;
 
-},{"../common/messages/Message":34,"../common/messages/MessageTypes":35,"./util/Log":29}],2:[function(require,module,exports){
+},{"../common/messages/Message":36,"../common/messages/MessageTypes":37,"./util/Log":30}],2:[function(require,module,exports){
 /// <reference path="../declarations/pixi.js.d.ts"/>
 /// <reference path="../declarations/createjs/soundjs.d.ts"/>
 "use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 //import Log = require('./util/Log');
 var Log = require("./util/Log");
 var Connection_1 = require("./Connection");
@@ -107,23 +112,29 @@ var TextElement_1 = require("./interface/TextElement");
 var AttachInfo_1 = require("./interface/AttachInfo");
 var MainMenu_1 = require("./interface/prefabs/MainMenu");
 var InputManager_1 = require("./interface/InputManager");
-var GameView_1 = require("./GameView");
+var GameEventHandler_1 = require("./events/GameEventHandler");
+var Room_1 = require("./room/Room");
 var MessageTypes = require("../common/messages/MessageTypes");
-var Game = (function () {
+var Game = (function (_super) {
+    __extends(Game, _super);
     function Game(viewDiv) {
+        var _this = _super.call(this) || this;
         /*=== PUBLIC ===*/
-        this.stage = null;
-        this.renderer = null;
-        this.viewDiv = null;
-        this.viewWidth = 500;
-        this.viewHeight = 500;
-        this.loginManager = new LoginManager_1.default();
-        this.gameView = new GameView_1.default();
-        this.joinedGameId = -1;
+        _this.stage = null;
+        _this.renderer = null;
+        _this.viewDiv = null;
+        _this.viewWidth = 500;
+        _this.viewHeight = 500;
+        _this.loginManager = new LoginManager_1.default();
         /*=== PRIVATE ===*/
-        this._volatileGraphics = new PIXI.Graphics(); //to be used when drawing to a RenderTexture
-        this._documentResized = true;
-        this.onTextureWorkerGetTexture = function (requestKey, texture) {
+        _this._volatileGraphics = new PIXI.Graphics(); //to be used when drawing to a RenderTexture
+        _this._documentResized = true;
+        _this._gameId = -1;
+        _this._roomId = -1;
+        _this._lastDrawTime = 0;
+        _this._currentDrawTime = 0;
+        _this._room = null;
+        _this.onTextureWorkerGetTexture = function (requestKey, texture) {
             /*var sprite:PIXI.Sprite = new PIXI.Sprite(texture);
             sprite.scale.x = 5;
             sprite.scale.y = 5;
@@ -131,10 +142,31 @@ var Game = (function () {
             sprite.position.y = 100;
             this.stage.addChild(sprite);*/
         };
-        this.viewDiv = viewDiv;
+        _this.viewDiv = viewDiv;
+        return _this;
     }
     Object.defineProperty(Game.prototype, "volatileGraphics", {
         get: function () { this._volatileGraphics.clear(); return this._volatileGraphics; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Game.prototype, "gameId", {
+        get: function () { return this._gameId; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Game.prototype, "roomId", {
+        get: function () { return this._roomId; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Game.prototype, "inGame", {
+        get: function () { return this._gameId > -1; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Game.prototype, "inRoom", {
+        get: function () { return this._roomId > -1; },
         enumerable: true,
         configurable: true
     });
@@ -161,10 +193,6 @@ var Game = (function () {
         window.addEventListener('resize', function () { return _this._documentResized = true; });
         //Add root UI element
         InterfaceElement_1.default.maskTexture = TextureGenerator.simpleRectangle(null, 8, 8, 0xffffff, 0);
-        /*this.interfaceRoot = new InterfaceElement();
-        this.interfaceRoot.id = "root";
-        this.interfaceRoot.name = "root";
-        this.interfaceRoot.addToContainer(this.stage);*/
         this.interfaceRoot = new InterfaceRoot_1.default(this.stage);
         //Set up InputManager
         InputManager_1.default.instance.init("#viewDiv");
@@ -174,14 +202,12 @@ var Game = (function () {
         this.connect();
         this.render();
     };
-    //actually seeing the game world will be relegated to ENTERING the game
-    //joining a game lets you manager characters before entering
-    Game.prototype.onJoinGame = function (gameId) {
-        this.joinedGameId = gameId;
-        //this.gameView.init(currentFrame, frameInterval);
-    };
     Game.prototype.render = function () {
         var _this = this;
+        this._currentDrawTime = Date.now() / 1000;
+        if (this._lastDrawTime <= 0)
+            this._lastDrawTime = this._currentDrawTime;
+        var timeDelta = this._currentDrawTime - this._lastDrawTime;
         if (this._documentResized) {
             this._documentResized = false;
             this.resize();
@@ -189,8 +215,12 @@ var Game = (function () {
         if (Game.useDebugGraphics)
             this.debugGraphics.clear();
         this.interfaceRoot.draw();
+        if (this._room) {
+            this._room.update(timeDelta);
+        }
         var renderer = this.renderer;
         renderer.render(this.stage);
+        this._lastDrawTime = this._currentDrawTime;
         requestAnimationFrame(function () { return _this.render(); });
     };
     Game.prototype.resize = function () {
@@ -221,14 +251,34 @@ var Game = (function () {
                 this.loginManager.onUserMessage(message);
                 break;
             case MessageTypes.GAME_JOINED:
-                this.onGameStatusMessage(message);
+                this.onJoinGame(message);
+                break;
+            case MessageTypes.ROOM_JOINED:
+                this.onJoinRoom(message);
                 break;
             default:
-                console.log("Received unhandled message from server:" + message.serialize());
-                console.log(message);
+                if (this._room) {
+                    this._room.onMessage(message);
+                }
+                else {
+                    console.log("Received unhandled message from server:" + message.serialize());
+                    console.log(message);
+                }
         }
     };
-    Game.prototype.onGameStatusMessage = function (message) {
+    Game.prototype.onJoinGame = function (message) {
+        this._gameId = message.gameId;
+    };
+    Game.prototype.onJoinRoom = function (message) {
+        this._roomId = message.roomId;
+        this.removeMainMenu();
+        if (this._room) {
+            this._room.cleanup();
+            this.stage.removeChild(this._room.container);
+        }
+        this._room = new Room_1.default();
+        this._room.init(message.roomId);
+        this.stage.addChildAt(this._room.container, 0);
     };
     Game.prototype.onConnectionError = function (e) {
         alert("Connection error! Is the server down?");
@@ -279,52 +329,45 @@ var Game = (function () {
         mainMenu.attachToParent(AttachInfo_1.default.Center);
         mainMenu.showLogin();
     };
+    Game.prototype.removeMainMenu = function () {
+        var mainMenu = this.interfaceRoot.getElementByFunction(function (element) {
+            return element instanceof MainMenu_1.default;
+        });
+        if (mainMenu)
+            mainMenu.removeSelf();
+    };
     return Game;
-}());
+}(GameEventHandler_1.default));
 Game.instance = null;
 Game.useDebugGraphics = false;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
 
-},{"../common/messages/MessageTypes":35,"./Connection":1,"./GameView":3,"./LoginManager":4,"./interface/AttachInfo":7,"./interface/InputManager":10,"./interface/InterfaceElement":11,"./interface/TextElement":16,"./interface/prefabs/InterfaceRoot":19,"./interface/prefabs/MainMenu":20,"./sound/SoundAssets":23,"./sound/SoundManager":24,"./textures/TextureGenerator":25,"./textures/TextureLoader":26,"./textures/TextureWorker":27,"./util/Log":29}],3:[function(require,module,exports){
-"use strict";
-var GameView = (function () {
-    function GameView() {
-        this._frame = -1;
-        this._frameInterval = 10; //ms
-        this._firstFrameNumber = -1;
-    }
-    GameView.prototype.init = function (currentFrame, frameInterval) {
-        this._frame = currentFrame;
-        this._firstFrameNumber = currentFrame;
-        this._frameInterval = frameInterval;
-        this._firstFrameTime = Date.now();
-    };
-    GameView.prototype.update = function () {
-    };
-    return GameView;
-}());
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = GameView;
-
-},{}],4:[function(require,module,exports){
+},{"../common/messages/MessageTypes":37,"./Connection":1,"./LoginManager":3,"./events/GameEventHandler":5,"./interface/AttachInfo":6,"./interface/InputManager":9,"./interface/InterfaceElement":10,"./interface/TextElement":15,"./interface/prefabs/InterfaceRoot":18,"./interface/prefabs/MainMenu":19,"./room/Room":22,"./sound/SoundAssets":24,"./sound/SoundManager":25,"./textures/TextureGenerator":26,"./textures/TextureLoader":27,"./textures/TextureWorker":28,"./util/Log":30}],3:[function(require,module,exports){
 /// <reference path="../declarations/jquery.d.ts"/>
 "use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var Util = require("../common/Util");
 var MessageTypes = require("../common/messages/MessageTypes");
 var Game_1 = require("./Game");
-var LoginManager = (function () {
+var GameEventHandler_1 = require("./events/GameEventHandler");
+var LoginManager = (function (_super) {
+    __extends(LoginManager, _super);
     function LoginManager() {
-        var _this = this;
-        this.userId = -1;
-        this.userName = "Naebdy!";
-        this.gameId = -1;
-        this.characterId = -1;
+        var _this = _super.call(this) || this;
+        _this.userId = -1;
+        _this.userName = "Naebdy!";
+        _this.gameId = -1;
+        _this.characterId = -1;
         /**
          * Assumes response is a JSON array.
          * Why did I implement this as an async thing?
          */
-        this.onGetGamesList = function (response) {
+        _this.onGetGamesList = function (response) {
             if (response && Util.isArray(response)) {
                 console.log("Current games:\n" + JSON.stringify(response));
                 var games = response;
@@ -337,6 +380,7 @@ var LoginManager = (function () {
                 }
             }
         };
+        return _this;
     }
     Object.defineProperty(LoginManager.prototype, "userString", {
         get: function () { return "User " + this.userId + " (" + this.userName + ")"; },
@@ -391,7 +435,7 @@ var LoginManager = (function () {
                 this.onEnterGame(params["characters"]);
             }
             else {
-                console.log("Failed to get character list: " + msg.failReason);
+                console.log("Failed to get enter game: " + msg.failReason);
             }
         }
     };
@@ -435,13 +479,15 @@ var LoginManager = (function () {
         Game_1.default.instance.connection.sendMessage(msg);
     };
     LoginManager.prototype.onEnterGame = function (response) {
+        console.log("Entered game!");
+        console.log(response);
     };
     return LoginManager;
-}());
+}(GameEventHandler_1.default));
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginManager;
 
-},{"../common/Util":32,"../common/messages/MessageTypes":35,"./Game":2}],5:[function(require,module,exports){
+},{"../common/Util":34,"../common/messages/MessageTypes":37,"./Game":2,"./events/GameEventHandler":5}],4:[function(require,module,exports){
 "use strict";
 var GameEvent = (function () {
     /**
@@ -497,7 +543,7 @@ GameEvent._maxPooled = 10; //in theory there's only ever one event, unless its h
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GameEvent;
 
-},{}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 var GameEvent_1 = require("./GameEvent");
 var GameEventHandler = (function () {
@@ -559,7 +605,7 @@ var GameEventHandler = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GameEventHandler;
 
-},{"./GameEvent":5}],7:[function(require,module,exports){
+},{"./GameEvent":4}],6:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require("../../common/Vector2D");
 var AttachInfo = (function () {
@@ -585,7 +631,7 @@ AttachInfo.LeftCenter = new AttachInfo(new Vector2D_1.default(0, 0.5), new Vecto
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AttachInfo;
 
-},{"../../common/Vector2D":33}],8:[function(require,module,exports){
+},{"../../common/Vector2D":35}],7:[function(require,module,exports){
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
@@ -675,7 +721,7 @@ BaseButton.STATE_DISABLED = 3;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = BaseButton;
 
-},{"../events/GameEvent":5,"./InterfaceElement":11}],9:[function(require,module,exports){
+},{"../events/GameEvent":4,"./InterfaceElement":10}],8:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -815,7 +861,7 @@ ElementList.CENTRE = 2;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ElementList;
 
-},{"./InterfaceElement":11}],10:[function(require,module,exports){
+},{"./InterfaceElement":10}],9:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/jquery.d.ts"/>
 var Vector2D_1 = require("../../common/Vector2D");
@@ -1054,7 +1100,7 @@ var keyNames = {
     "39": "RIGHT"
 };
 
-},{"../../common/Vector2D":33,"../Game":2,"../events/GameEvent":5}],11:[function(require,module,exports){
+},{"../../common/Vector2D":35,"../Game":2,"../events/GameEvent":4}],10:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1463,7 +1509,7 @@ InterfaceElement.drawTime = 0;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceElement;
 
-},{"../../common/Vector2D":33,"../Game":2,"../events/GameEventHandler":6,"./InputManager":10,"./ResizeInfo":14}],12:[function(require,module,exports){
+},{"../../common/Vector2D":35,"../Game":2,"../events/GameEventHandler":5,"./InputManager":9,"./ResizeInfo":13}],11:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1496,7 +1542,7 @@ var MaskElement = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MaskElement;
 
-},{"./InterfaceElement":11}],13:[function(require,module,exports){
+},{"./InterfaceElement":10}],12:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1563,7 +1609,7 @@ Panel.FIELD = 2;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Panel;
 
-},{"../textures/TextureGenerator":25,"./InterfaceElement":11}],14:[function(require,module,exports){
+},{"../textures/TextureGenerator":26,"./InterfaceElement":10}],13:[function(require,module,exports){
 "use strict";
 var Vector2D_1 = require("../../common/Vector2D");
 var AssetCache_1 = require("../../common/AssetCache");
@@ -1591,7 +1637,7 @@ ResizeInfo.cache = new AssetCache_1.default(100);
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ResizeInfo;
 
-},{"../../common/AssetCache":30,"../../common/Vector2D":33}],15:[function(require,module,exports){
+},{"../../common/AssetCache":31,"../../common/Vector2D":35}],14:[function(require,module,exports){
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
@@ -1681,7 +1727,7 @@ TextButton._bgCache = new AssetCache_1.default(10, function (deleted) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextButton;
 
-},{"../../common/AssetCache":30,"../events/GameEvent":5,"../textures/TextureGenerator":25,"./AttachInfo":7,"./BaseButton":8,"./TextElement":16}],16:[function(require,module,exports){
+},{"../../common/AssetCache":31,"../events/GameEvent":4,"../textures/TextureGenerator":26,"./AttachInfo":6,"./BaseButton":7,"./TextElement":15}],15:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1756,7 +1802,7 @@ TextElement.veryBigText = new PIXI.TextStyle({ fontSize: 48, fontFamily: mainFon
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextElement;
 
-},{"./InterfaceElement":11}],17:[function(require,module,exports){
+},{"./InterfaceElement":10}],16:[function(require,module,exports){
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
@@ -1924,7 +1970,7 @@ TextField.BLINK_INTERVAL = 750;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextField;
 
-},{"../../common/Vector2D":33,"../events/GameEvent":5,"./AttachInfo":7,"./InterfaceElement":11,"./MaskElement":12,"./Panel":13,"./TextElement":16}],18:[function(require,module,exports){
+},{"../../common/Vector2D":35,"../events/GameEvent":4,"./AttachInfo":6,"./InterfaceElement":10,"./MaskElement":11,"./Panel":12,"./TextElement":15}],17:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -2097,7 +2143,7 @@ var GenericListDialog = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GenericListDialog;
 
-},{"../../events/GameEvent":5,"../AttachInfo":7,"../ElementList":9,"../InterfaceElement":11,"../Panel":13,"../TextButton":15,"../TextElement":16,"../TextField":17,"./TextFieldListManager":21}],19:[function(require,module,exports){
+},{"../../events/GameEvent":4,"../AttachInfo":6,"../ElementList":8,"../InterfaceElement":10,"../Panel":12,"../TextButton":14,"../TextElement":15,"../TextField":16,"./TextFieldListManager":20}],18:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -2182,6 +2228,16 @@ var InterfaceRoot = (function (_super) {
         this.addPopup(dialog);
         dialog.attachToParent(AttachInfo_1.default.Center);
         InputManager_1.default.instance.focus(null);
+        return dialog;
+    };
+    InterfaceRoot.prototype.showStatusPopup = function (status) {
+        var dialog = new GenericListDialog_1.default(200, 10);
+        dialog.addMediumTitle(status);
+        dialog.finalize();
+        this.addPopup(dialog);
+        dialog.attachToParent(AttachInfo_1.default.Center);
+        InputManager_1.default.instance.focus(null);
+        return dialog;
     };
     return InterfaceRoot;
 }(InterfaceElement_1.default));
@@ -2196,7 +2252,7 @@ InterfaceRoot._instance = null;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceRoot;
 
-},{"../AttachInfo":7,"../InputManager":10,"../InterfaceElement":11,"../TextButton":15,"./GenericListDialog":18}],20:[function(require,module,exports){
+},{"../AttachInfo":6,"../InputManager":9,"../InterfaceElement":10,"../TextButton":14,"./GenericListDialog":17}],19:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -2259,7 +2315,7 @@ var MainMenu = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MainMenu;
 
-},{"../../Game":2,"../../util/Log":29,"../AttachInfo":7,"../InterfaceElement":11,"../TextButton":15,"../TextField":17,"./GenericListDialog":18,"./InterfaceRoot":19}],21:[function(require,module,exports){
+},{"../../Game":2,"../../util/Log":30,"../AttachInfo":6,"../InterfaceElement":10,"../TextButton":14,"../TextField":16,"./GenericListDialog":17,"./InterfaceRoot":18}],20:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -2319,7 +2375,7 @@ var TextFieldListManager = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextFieldListManager;
 
-},{"../../events/GameEvent":5,"../../events/GameEventHandler":6,"../InputManager":10}],22:[function(require,module,exports){
+},{"../../events/GameEvent":4,"../../events/GameEventHandler":5,"../InputManager":9}],21:[function(require,module,exports){
 /*
    Code entry point. Keep it clean.
 */
@@ -2329,7 +2385,184 @@ var viewDiv = document.getElementById("viewDiv");
 var game = new Game_1.default(viewDiv);
 game.init();
 
-},{"./Game":2}],23:[function(require,module,exports){
+},{"./Game":2}],22:[function(require,module,exports){
+/// <reference path="../../declarations/pixi.js.d.ts"/>
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var MessageTypes = require("../../common/messages/MessageTypes");
+var Game_1 = require("../Game");
+var GameEventHandler_1 = require("../events/GameEventHandler");
+var Unit_1 = require("./Unit");
+var IDObjectGroup_1 = require("../../common/IDObjectGroup");
+var Room = (function (_super) {
+    __extends(Room, _super);
+    function Room() {
+        var _this = _super.call(this) || this;
+        _this._container = new PIXI.Container();
+        _this._entityContainer = new PIXI.Container();
+        _this._roomId = -1;
+        _this._frame = -1;
+        _this._time = -1;
+        _this._statusPopup = null;
+        _this._units = new IDObjectGroup_1.default();
+        _this._container.addChild(_this._entityContainer);
+        _this._container.scale.x = 2;
+        _this._container.scale.y = 2;
+        return _this;
+    }
+    Object.defineProperty(Room.prototype, "container", {
+        get: function () { return this._container; },
+        enumerable: true,
+        configurable: true
+    });
+    Room.prototype.init = function (roomId) {
+        this._roomId = roomId;
+        this.setStatusPopup("Joining...");
+    };
+    Room.prototype.update = function (timeDelta) {
+        if (this._frame == -1)
+            return;
+        for (var _i = 0, _a = this._units.list; _i < _a.length; _i++) {
+            var unit = _a[_i];
+            unit.update(timeDelta);
+        }
+    };
+    Room.prototype.onMessage = function (message) {
+        /**
+         * Big big TODO:
+         * Latency management (I think previous MMOO had this sorted quite well)
+         */
+        switch (message.type) {
+            case MessageTypes.FRAME:
+                this.onFrameMessage(message);
+                break;
+            case MessageTypes.UNIT_SEEN:
+                this.onUnitSeen(message);
+                break;
+            case MessageTypes.UNIT_UNSEEN:
+                this.onUnitUnseen(message);
+                break;
+            case MessageTypes.UNIT_MOVED:
+                this.onUnitMoved(message);
+                break;
+            default:
+                console.log("unhandled message in Room");
+                console.log(message);
+        }
+    };
+    Room.prototype.cleanup = function () {
+    };
+    Room.prototype.setStatusPopup = function (status) {
+        this.clearStatusPopup();
+        this._statusPopup = Game_1.default.instance.interfaceRoot.showStatusPopup(status);
+    };
+    Room.prototype.clearStatusPopup = function () {
+        if (this._statusPopup) {
+            this._statusPopup.removeSelf();
+        }
+        this._statusPopup = null;
+    };
+    Room.prototype.addSpriteForUnit = function (unit) {
+        if (unit.sprite)
+            this._entityContainer.addChild(unit.sprite);
+    };
+    Room.prototype.onFrameMessage = function (message) {
+        if (this._frame == -1) {
+            this.clearStatusPopup();
+            this._frame = message.frameId;
+        }
+    };
+    Room.prototype.onUnitSeen = function (message) {
+        var unit = new Unit_1.default();
+        unit.init(this, message.data);
+        this._units.add(unit);
+    };
+    Room.prototype.onUnitUnseen = function (message) {
+        var unit = this._units.getById(message.unitId);
+        if (unit) {
+            if (unit.sprite)
+                this._entityContainer.removeChild(unit.sprite);
+            this._units.remove(unit);
+        }
+    };
+    Room.prototype.onUnitMoved = function (message) {
+        var unit = this._units.getById(message.unitId);
+        if (unit) {
+            unit.setMoveDirection(message.direction, message.position);
+        }
+    };
+    return Room;
+}(GameEventHandler_1.default));
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Room;
+
+},{"../../common/IDObjectGroup":32,"../../common/messages/MessageTypes":37,"../Game":2,"../events/GameEventHandler":5,"./Unit":23}],23:[function(require,module,exports){
+/// <reference path="../../declarations/pixi.js.d.ts"/>
+"use strict";
+var Vector2D_1 = require("../../common/Vector2D");
+var Game_1 = require("../Game");
+var Unit = (function () {
+    function Unit() {
+        this.id = -1;
+        this.moveSpeed = 100; //units per second that this unit CAN move, if it is moving
+        this.name = "?";
+        this.position = new Vector2D_1.default(0, 0);
+        this.sprite = null;
+        this.moveDirection = -1;
+        this.room = null;
+    }
+    Unit.prototype.init = function (room, data) {
+        var _this = this;
+        this.room = room;
+        this.readData(data);
+        Game_1.default.instance.textureWorker.getTexture('character/man', { from: [], to: [] }, function (requestKey, texture) {
+            _this.sprite = new PIXI.Sprite(texture);
+            /*this.sprite.scale.x = 2;
+            this.sprite.scale.y = 2;*/
+            _this.updateSpritePosition();
+            _this.room.addSpriteForUnit(_this);
+        });
+    };
+    Unit.prototype.readData = function (data) {
+        if (data.hasOwnProperty("id"))
+            this.id = data["id"];
+        if (data.hasOwnProperty("name"))
+            this.name = data["name"];
+        if (data.hasOwnProperty("direction"))
+            this.moveDirection = data["direction"];
+        if (data.hasOwnProperty("speed"))
+            this.moveSpeed = data["speed"];
+        if (data.hasOwnProperty("position"))
+            this.position = Vector2D_1.default.fromArray(data["position"]);
+    };
+    Unit.prototype.update = function (timeDelta) {
+        if (this.moveDirection >= 0) {
+            this.position.offset(this.moveDirection * (360 / Unit.numMoveDirections), this.moveSpeed * timeDelta);
+        }
+        this.updateSpritePosition();
+    };
+    ///For move messages
+    Unit.prototype.setMoveDirection = function (direction, position) {
+        this.position.set(position);
+        this.moveDirection = direction;
+        this.updateSpritePosition();
+    };
+    Unit.prototype.updateSpritePosition = function () {
+        if (this.sprite) {
+            this.sprite.position.set(this.position.x, this.position.y);
+        }
+    };
+    return Unit;
+}());
+Unit.numMoveDirections = 16;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Unit;
+
+},{"../../common/Vector2D":35,"../Game":2}],24:[function(require,module,exports){
 "use strict";
 exports.mainMenuMusic = [
     ["music/fortress", "sound/music/fortress.ogg"]
@@ -2340,7 +2573,7 @@ exports.interfaceSounds = [
     ["ui/nope", "sound/ui/nope.ogg"]
 ];
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 var SoundLoadRequest = (function () {
     function SoundLoadRequest(name, list, onComplete, onProgress) {
@@ -2433,7 +2666,7 @@ SoundManager._instance = null;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = SoundManager;
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var Game_1 = require("../Game");
@@ -2459,7 +2692,7 @@ function buttonBackground(width, height, type) {
 }
 exports.buttonBackground = buttonBackground;
 
-},{"../Game":2}],26:[function(require,module,exports){
+},{"../Game":2}],27:[function(require,module,exports){
 "use strict";
 var TextureLoader = (function () {
     function TextureLoader(sheetName, mapName, callback) {
@@ -2519,7 +2752,7 @@ var TextureLoader = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureLoader;
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var ColorUtil = require("../util/ColorUtil");
@@ -2661,7 +2894,7 @@ TextureWorker._supportsImageDataConstructor = -1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureWorker;
 
-},{"../util/ColorUtil":28}],28:[function(require,module,exports){
+},{"../util/ColorUtil":29}],29:[function(require,module,exports){
 "use strict";
 function rgbToNumber(r, g, b) {
     return (r << 16) + (g << 8) + b;
@@ -2683,7 +2916,7 @@ function rgbaString(r, g, b, a) {
 }
 exports.rgbaString = rgbaString;
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict";
 /*
    Provides pretty console.log messages, by key.
@@ -2734,7 +2967,7 @@ function log(typeName, msg) {
 }
 exports.log = log;
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 var AssetCache = (function () {
     /**
@@ -2785,7 +3018,63 @@ var AssetCache = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AssetCache;
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
+"use strict";
+var IDObjectGroup = (function () {
+    /**
+     * Provides safe convenience methods for efficiently tracking a group of objects.
+     * Uses an Object and an Array. The Array is public for iteration but should NOT be modified.
+     */
+    function IDObjectGroup() {
+        this.list = [];
+        this._map = {};
+    }
+    /**
+     * Returns whether the object is actually added
+     */
+    IDObjectGroup.prototype.add = function (obj) {
+        if (this._map.hasOwnProperty(obj.id.toString()))
+            return false;
+        this.list.push(obj);
+        this._map[obj.id.toString()] = obj;
+        return true;
+    };
+    /**
+     * Returns whether the object is actually removed
+     */
+    IDObjectGroup.prototype.remove = function (obj) {
+        if (!this._map.hasOwnProperty(obj.id.toString()))
+            return false;
+        var index = this.list.indexOf(obj);
+        this.list.splice(index, 1);
+        delete this._map[obj.id.toString()];
+        return true;
+    };
+    IDObjectGroup.prototype.getById = function (id) {
+        var obj = this._map[id.toString()];
+        if (obj)
+            return obj;
+        return null;
+    };
+    IDObjectGroup.prototype.contains = function (obj) {
+        return this.containsById(obj.id);
+    };
+    IDObjectGroup.prototype.containsById = function (id) {
+        return this._map.hasOwnProperty(id.toString());
+    };
+    Object.defineProperty(IDObjectGroup.prototype, "count", {
+        get: function () {
+            return this.list.length;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return IDObjectGroup;
+}());
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = IDObjectGroup;
+
+},{}],33:[function(require,module,exports){
 "use strict";
 /**
  * Generates string IDs from an alphabet. IDs can be relinquished and recycled to keep them short.
@@ -2853,7 +3142,7 @@ IDPool._alphanumeric = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = IDPool;
 
-},{}],32:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 "use strict";
 function noop() { }
 exports.noop = noop;
@@ -2934,7 +3223,7 @@ function isCoordinate(x) {
 }
 exports.isCoordinate = isCoordinate;
 
-},{}],33:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 "use strict";
 var Util = require("./Util");
 var Vector2D = (function () {
@@ -3014,6 +3303,8 @@ var Vector2D = (function () {
         return ret;
     };
     Vector2D.prototype.angleTo = function (other) {
+        if (!other)
+            return 0;
         return Vector2D.radToDeg(Math.atan2(other.y - this.y, other.x - this.x));
     };
     Vector2D.prototype.withinDistance = function (other, distance) {
@@ -3049,7 +3340,7 @@ var Vector2D = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Vector2D;
 
-},{"./Util":32}],34:[function(require,module,exports){
+},{"./Util":34}],36:[function(require,module,exports){
 "use strict";
 var IDPool_1 = require("../IDPool");
 var Vector2D_1 = require("../Vector2D");
@@ -3221,7 +3512,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Message;
 var MessageTypes = require("./MessageTypes");
 
-},{"../IDPool":31,"../Util":32,"../Vector2D":33,"./MessageTypes":35}],35:[function(require,module,exports){
+},{"../IDPool":33,"../Util":34,"../Vector2D":35,"./MessageTypes":37}],37:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -3606,4 +3897,4 @@ var Frame = (function (_super) {
 exports.Frame = Frame;
 classesByType[exports.FRAME] = Frame;
 
-},{"../Util":32,"../Vector2D":33,"./Message":34}]},{},[22]);
+},{"../Util":34,"../Vector2D":35,"./Message":36}]},{},[21]);
