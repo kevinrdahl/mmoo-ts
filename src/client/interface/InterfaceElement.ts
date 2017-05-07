@@ -5,15 +5,17 @@ import ResizeInfo from './ResizeInfo';
 import InputManager from './InputManager';
 import Game from '../Game';
 import GameEventHandler from '../events/GameEventHandler';
+import InterfaceRoot from './prefabs/InterfaceRoot';
 
 export default class InterfaceElement extends GameEventHandler {
-	public id:String = "";
-	public name:String = "";
+	public id:string = "";
+	public name:string = "";
 	public clickable:boolean = false;
 	public draggable:boolean = false;
 	public useOwnBounds:boolean = true; //instead of the container's bounds, use the rect defined by own x,y,width,height
 	public ignoreChildrenForClick:boolean = false; //don't click the kids, click me
 	public dragElement:InterfaceElement = null;
+	public useDebugRect:boolean = true;
 
 	public static maskTexture:PIXI.Texture = null; //8x8
 
@@ -60,7 +62,8 @@ export default class InterfaceElement extends GameEventHandler {
 	get width():number { return this._width; }
 	get height():number { return this._height; }
 	get displayObject():PIXI.Container { return this._displayObject; }
-	get children():Array<InterfaceElement> { return this._children.slice() }
+	get children():Array<InterfaceElement> { return this._children.slice(); }
+	get numChildren():number { return this._children.length; }
 	get fullName():string {
 		var s:string = this._className;
 		if (this.id != "")      s += " #" + this.id;
@@ -139,7 +142,7 @@ export default class InterfaceElement extends GameEventHandler {
 
 	//BFS, always call from the lowest known ancestor
 	//Hey kid, don't make cyclical structures. I'm putting maxChecks here anyway, just in case.
-	public getElementByFunction(func:(e:InterfaceElement)=>boolean, maxChecks:number = 500) {
+	public getElementByFunction(func:(e:InterfaceElement)=>boolean, maxChecks:number = 500):InterfaceElement {
 		if (func(this)) return this;
 
 		var toCheck:Array<InterfaceElement> = [this];
@@ -174,7 +177,7 @@ export default class InterfaceElement extends GameEventHandler {
 			this._children[i].draw();
 		}
 
-		if (Game.useDebugGraphics) {
+		if (Game.useDebugGraphics && this.useDebugRect) {
 			var global = this.getGlobalPosition();
 			Game.instance.debugGraphics.lineStyle(1, this._debugColor, 1);
 			Game.instance.debugGraphics.drawRect(global.x, global.y, this._width, this._height);
@@ -266,6 +269,9 @@ export default class InterfaceElement extends GameEventHandler {
 		child.onRemove(this);
 	}
 
+	/**
+	 * Removes this element from its parent
+	 */
 	public removeSelf(recurse:boolean = true) {
 		if (this._parent != null) this._parent.removeChild(this, recurse);
 	}
@@ -285,7 +291,7 @@ export default class InterfaceElement extends GameEventHandler {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param info If null, fills the parent completely
 	 */
 	public resizeToParent(info:ResizeInfo = null) {

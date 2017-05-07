@@ -296,7 +296,7 @@ export default class WebSocketClient {
 			var charData = operation.result;
 			//are you logged in to a game server?
 			if (this.loggedIn && this.onGameServer) {
-				var game:Game = (this.server as GameServer).getGameById(charData.worldId);
+				var game:Game = (this.server as GameServer).getGameById(charData.gameId);
 				//is that character's game on this server?
 				if (game) {
 					//but does it belong to this user?
@@ -316,7 +316,7 @@ export default class WebSocketClient {
 					}
 				} else {
 					params.success = false;
-					params['failReason'] = "Character's world isn't on this server";
+					params['failReason'] = "Character's game isn't on this server";
 				}
 			} else {
 				params.success = false;

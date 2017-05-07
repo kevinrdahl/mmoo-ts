@@ -87,7 +87,6 @@ export default class Game {
 		this.interfaceRoot.addToContainer(this.stage);*/
 		this.interfaceRoot = new InterfaceRoot(this.stage);
 
-
 		//Set up InputManager
 		InputManager.instance.init("#viewDiv");
 
@@ -239,6 +238,6 @@ export default class Game {
 		var mainMenu:MainMenu = new MainMenu();
 		this.interfaceRoot.addDialog(mainMenu);
 		mainMenu.attachToParent(AttachInfo.Center);
-		mainMenu.showMenu("login");
+		mainMenu.showLogin();
 	}
 }

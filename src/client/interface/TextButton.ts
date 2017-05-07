@@ -47,11 +47,21 @@ export default class TextButton extends BaseButton {
 	}
 
 	private _textElement:TextElement;
+	private _onClick:(e:GameEvent) => void;
 
 	public set text(s:string) {
 		this._textElement.text = s;
 	}
 	public get text():string { return this._textElement.text; }
+
+	public set onClick(func:(e: GameEvent) => void) {
+		if (this._onClick) {
+			this.removeEventListener(GameEvent.types.ui.LEFTMOUSECLICK, this._onClick);
+		}
+
+		if (func) this.addEventListener(GameEvent.types.ui.LEFTMOUSECLICK, func);
+		this._onClick = func;
+	}
 
 	constructor(text:string, colorScheme=null, width:number = 100, height:number = 30, textStyle:PIXI.TextStyle=null) {
 		if (!colorScheme) colorScheme = TextButton.colorSchemes.blue;

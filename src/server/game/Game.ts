@@ -131,7 +131,7 @@ export default class Game {
 			this.addCharacter(character);
 		}
 
-		console.log(this.name + ": User '" + client.user.name + "' entered as Character" + character.name);
+		console.log(this.name + ": User '" + client.user.name + "' entered as character " + character.name);
 
 		client.sendMessage(new MessageTypes.GameJoined(this._id, this._currentFrame, this._updateInterval));
 
@@ -152,7 +152,7 @@ export default class Game {
 	 * Called when the player's WebSocketClient disconnects.
 	 */
 	public onPlayerDisconnect(player:Player) {
-		console.log("Player " + player.debugString + " disconnected.");
+		console.log(player.debugString + " disconnected.");
 		player.leaveAllRooms();
 	}
 

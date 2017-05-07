@@ -1,11 +1,14 @@
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 import InterfaceElement from './InterfaceElement';
 
+var mainFont:string = "Arial";
+
 export default class TextElement extends InterfaceElement {
 	//Open Sans
-	public static basicText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:14, fontFamily:'Verdana', fill:0xffffff, align:'left'});
-	public static bigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:32, fontFamily:'Verdana', fill:0xffffff, align:'left'});
-	public static veryBigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize: 48, fontFamily:'Verdana', fill:0xffffff, align:'left'});
+	public static basicText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:14, fontFamily:mainFont, fill:0xffffff, align:'left'});
+	public static mediumText: PIXI.TextStyle = new PIXI.TextStyle({ fontSize: 20, fontFamily: mainFont, fill: 0xffffff, align: 'left' });
+	public static bigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize:32, fontFamily:mainFont, fill:0xffffff, align:'left'});
+	public static veryBigText:PIXI.TextStyle = new PIXI.TextStyle({fontSize: 48, fontFamily:mainFont, fill:0xffffff, align:'left'});
 
 	protected _debugColor = 0xff0000;
 

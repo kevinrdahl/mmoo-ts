@@ -81,7 +81,7 @@ export default class Player {
 			}
 		}
 		else {
-			console.log("Player " + this.id + ": receiving messages, but no associated client!");
+			console.log(this.debugString + ": receiving messages, but no associated client!");
 		}
 
 		this._serializedMessageQueue = [];

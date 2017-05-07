@@ -87,7 +87,7 @@ Connection.getRequestId = 0;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Connection;
 
-},{"../common/messages/Message":32,"../common/messages/MessageTypes":33,"./util/Log":27}],2:[function(require,module,exports){
+},{"../common/messages/Message":34,"../common/messages/MessageTypes":35,"./util/Log":29}],2:[function(require,module,exports){
 /// <reference path="../declarations/pixi.js.d.ts"/>
 /// <reference path="../declarations/createjs/soundjs.d.ts"/>
 "use strict";
@@ -101,6 +101,7 @@ var TextureGenerator = require("./textures/TextureGenerator");
 var SoundManager_1 = require("./sound/SoundManager");
 //import SoundAssets = require('./sound/SoundAssets');
 var SoundAssets = require("./sound/SoundAssets");
+var InterfaceRoot_1 = require("./interface/prefabs/InterfaceRoot");
 var InterfaceElement_1 = require("./interface/InterfaceElement");
 var TextElement_1 = require("./interface/TextElement");
 var AttachInfo_1 = require("./interface/AttachInfo");
@@ -160,10 +161,11 @@ var Game = (function () {
         window.addEventListener('resize', function () { return _this._documentResized = true; });
         //Add root UI element
         InterfaceElement_1.default.maskTexture = TextureGenerator.simpleRectangle(null, 8, 8, 0xffffff, 0);
-        this.interfaceRoot = new InterfaceElement_1.default();
+        /*this.interfaceRoot = new InterfaceElement();
         this.interfaceRoot.id = "root";
         this.interfaceRoot.name = "root";
-        this.interfaceRoot.addToContainer(this.stage);
+        this.interfaceRoot.addToContainer(this.stage);*/
+        this.interfaceRoot = new InterfaceRoot_1.default(this.stage);
         //Set up InputManager
         InputManager_1.default.instance.init("#viewDiv");
         //Debug graphics
@@ -273,9 +275,9 @@ var Game = (function () {
         var loadingText = this.interfaceRoot.getElementById("loadingText");
         this.interfaceRoot.removeChild(loadingText);
         var mainMenu = new MainMenu_1.default();
-        this.interfaceRoot.addChild(mainMenu);
+        this.interfaceRoot.addDialog(mainMenu);
         mainMenu.attachToParent(AttachInfo_1.default.Center);
-        mainMenu.showMenu("login");
+        mainMenu.showLogin();
     };
     return Game;
 }());
@@ -284,7 +286,7 @@ Game.useDebugGraphics = false;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Game;
 
-},{"../common/messages/MessageTypes":33,"./Connection":1,"./GameView":3,"./LoginManager":4,"./interface/AttachInfo":7,"./interface/InputManager":10,"./interface/InterfaceElement":11,"./interface/TextElement":15,"./interface/prefabs/MainMenu":18,"./sound/SoundAssets":21,"./sound/SoundManager":22,"./textures/TextureGenerator":23,"./textures/TextureLoader":24,"./textures/TextureWorker":25,"./util/Log":27}],3:[function(require,module,exports){
+},{"../common/messages/MessageTypes":35,"./Connection":1,"./GameView":3,"./LoginManager":4,"./interface/AttachInfo":7,"./interface/InputManager":10,"./interface/InterfaceElement":11,"./interface/TextElement":16,"./interface/prefabs/InterfaceRoot":19,"./interface/prefabs/MainMenu":20,"./sound/SoundAssets":23,"./sound/SoundManager":24,"./textures/TextureGenerator":25,"./textures/TextureLoader":26,"./textures/TextureWorker":27,"./util/Log":29}],3:[function(require,module,exports){
 "use strict";
 var GameView = (function () {
     function GameView() {
@@ -439,7 +441,7 @@ var LoginManager = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginManager;
 
-},{"../common/Util":30,"../common/messages/MessageTypes":33,"./Game":2}],5:[function(require,module,exports){
+},{"../common/Util":32,"../common/messages/MessageTypes":35,"./Game":2}],5:[function(require,module,exports){
 "use strict";
 var GameEvent = (function () {
     /**
@@ -583,7 +585,7 @@ AttachInfo.LeftCenter = new AttachInfo(new Vector2D_1.default(0, 0.5), new Vecto
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AttachInfo;
 
-},{"../../common/Vector2D":31}],8:[function(require,module,exports){
+},{"../../common/Vector2D":33}],8:[function(require,module,exports){
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
@@ -847,6 +849,10 @@ var InputManager = (function () {
         this._onMouseDown = function (e) {
             var coords = _this.getMouseCoords(e, true);
             var element = Game_1.default.instance.interfaceRoot.getElementAtPoint(coords);
+            if (element)
+                console.log("CLICK " + element.fullName);
+            else
+                console.log("CLICK nothing");
             switch (e.which) {
                 case 1:
                     //left
@@ -1048,7 +1054,7 @@ var keyNames = {
     "39": "RIGHT"
 };
 
-},{"../../common/Vector2D":31,"../Game":2,"../events/GameEvent":5}],11:[function(require,module,exports){
+},{"../../common/Vector2D":33,"../Game":2,"../events/GameEvent":5}],11:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1057,6 +1063,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var Vector2D_1 = require("../../common/Vector2D");
+var ResizeInfo_1 = require("./ResizeInfo");
 var InputManager_1 = require("./InputManager");
 var Game_1 = require("../Game");
 var GameEventHandler_1 = require("../events/GameEventHandler");
@@ -1075,6 +1082,7 @@ var InterfaceElement = (function (_super) {
         _this.useOwnBounds = true; //instead of the container's bounds, use the rect defined by own x,y,width,height
         _this.ignoreChildrenForClick = false; //don't click the kids, click me
         _this.dragElement = null;
+        _this.useDebugRect = true;
         /*public onMouseDown:(coords:Vector2D)=>void;
         public onMouseUp:(coords:Vector2D)=>void;
         public onClick:(coords:Vector2D)=>void;
@@ -1135,6 +1143,11 @@ var InterfaceElement = (function (_super) {
     });
     Object.defineProperty(InterfaceElement.prototype, "children", {
         get: function () { return this._children.slice(); },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(InterfaceElement.prototype, "numChildren", {
+        get: function () { return this._children.length; },
         enumerable: true,
         configurable: true
     });
@@ -1259,7 +1272,7 @@ var InterfaceElement = (function (_super) {
         for (var i = 0; i < len; i++) {
             this._children[i].draw();
         }
-        if (Game_1.default.useDebugGraphics) {
+        if (Game_1.default.useDebugGraphics && this.useDebugRect) {
             var global = this.getGlobalPosition();
             Game_1.default.instance.debugGraphics.lineStyle(1, this._debugColor, 1);
             Game_1.default.instance.debugGraphics.drawRect(global.x, global.y, this._width, this._height);
@@ -1281,10 +1294,6 @@ var InterfaceElement = (function (_super) {
                 h = child.height;
         }
         this.resize(w, h);
-    };
-    //Used by Game to add the root element, shouldn't be used elsewhere
-    InterfaceElement.prototype.addToContainer = function (container) {
-        container.addChild(this._displayObject);
     };
     InterfaceElement.prototype.addChild = function (child) {
         this._children.push(child);
@@ -1343,6 +1352,9 @@ var InterfaceElement = (function (_super) {
         }
         child.onRemove(this);
     };
+    /**
+     * Removes this element from its parent
+     */
     InterfaceElement.prototype.removeSelf = function (recurse) {
         if (recurse === void 0) { recurse = true; }
         if (this._parent != null)
@@ -1359,7 +1371,14 @@ var InterfaceElement = (function (_super) {
     InterfaceElement.prototype.detachFromParent = function () {
         this._attach = null;
     };
+    /**
+     *
+     * @param info If null, fills the parent completely
+     */
     InterfaceElement.prototype.resizeToParent = function (info) {
+        if (info === void 0) { info = null; }
+        if (info == null)
+            info = ResizeInfo_1.default.get(1, 1, 0, 0);
         this._resize = info;
         this.onParentResize();
     };
@@ -1444,7 +1463,7 @@ InterfaceElement.drawTime = 0;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InterfaceElement;
 
-},{"../../common/Vector2D":31,"../Game":2,"../events/GameEventHandler":6,"./InputManager":10}],12:[function(require,module,exports){
+},{"../../common/Vector2D":33,"../Game":2,"../events/GameEventHandler":6,"./InputManager":10,"./ResizeInfo":14}],12:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1544,7 +1563,35 @@ Panel.FIELD = 2;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Panel;
 
-},{"../textures/TextureGenerator":23,"./InterfaceElement":11}],14:[function(require,module,exports){
+},{"../textures/TextureGenerator":25,"./InterfaceElement":11}],14:[function(require,module,exports){
+"use strict";
+var Vector2D_1 = require("../../common/Vector2D");
+var AssetCache_1 = require("../../common/AssetCache");
+var ResizeInfo = (function () {
+    function ResizeInfo(fill, padding) {
+        this.fill = fill;
+        this.padding = padding;
+    }
+    ResizeInfo.get = function (fillX, fillY, paddingX, paddingY) {
+        var key = JSON.stringify([fillX, fillY, paddingX, paddingY]);
+        var info = ResizeInfo.cache.get(key);
+        if (!info) {
+            info = new ResizeInfo(new Vector2D_1.default(fillX, fillY), new Vector2D_1.default(paddingX, paddingY));
+            ResizeInfo.cache.set(key, info);
+        }
+        return info;
+    };
+    ResizeInfo.prototype.clone = function () {
+        return new ResizeInfo(this.fill.clone(), this.padding.clone());
+    };
+    return ResizeInfo;
+}());
+//Lots of things will probably end up sharing ResizeInfo, but unlike AttachInfo there aren't natural constants
+ResizeInfo.cache = new AssetCache_1.default(100);
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = ResizeInfo;
+
+},{"../../common/AssetCache":30,"../../common/Vector2D":33}],15:[function(require,module,exports){
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
@@ -1552,6 +1599,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var GameEvent_1 = require("../events/GameEvent");
 var BaseButton_1 = require("./BaseButton");
 var AssetCache_1 = require("../../common/AssetCache");
 var TextElement_1 = require("./TextElement");
@@ -1594,6 +1642,18 @@ var TextButton = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(TextButton.prototype, "onClick", {
+        set: function (func) {
+            if (this._onClick) {
+                this.removeEventListener(GameEvent_1.default.types.ui.LEFTMOUSECLICK, this._onClick);
+            }
+            if (func)
+                this.addEventListener(GameEvent_1.default.types.ui.LEFTMOUSECLICK, func);
+            this._onClick = func;
+        },
+        enumerable: true,
+        configurable: true
+    });
     return TextButton;
 }(BaseButton_1.default));
 //note: use the gems in oryx 16 bit items
@@ -1621,7 +1681,7 @@ TextButton._bgCache = new AssetCache_1.default(10, function (deleted) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextButton;
 
-},{"../../common/AssetCache":28,"../textures/TextureGenerator":23,"./AttachInfo":7,"./BaseButton":8,"./TextElement":15}],15:[function(require,module,exports){
+},{"../../common/AssetCache":30,"../events/GameEvent":5,"../textures/TextureGenerator":25,"./AttachInfo":7,"./BaseButton":8,"./TextElement":16}],16:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1630,6 +1690,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var InterfaceElement_1 = require("./InterfaceElement");
+var mainFont = "Arial";
 var TextElement = (function (_super) {
     __extends(TextElement, _super);
     function TextElement(text, style) {
@@ -1688,13 +1749,14 @@ var TextElement = (function (_super) {
     return TextElement;
 }(InterfaceElement_1.default));
 //Open Sans
-TextElement.basicText = new PIXI.TextStyle({ fontSize: 14, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
-TextElement.bigText = new PIXI.TextStyle({ fontSize: 32, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
-TextElement.veryBigText = new PIXI.TextStyle({ fontSize: 48, fontFamily: 'Verdana', fill: 0xffffff, align: 'left' });
+TextElement.basicText = new PIXI.TextStyle({ fontSize: 14, fontFamily: mainFont, fill: 0xffffff, align: 'left' });
+TextElement.mediumText = new PIXI.TextStyle({ fontSize: 20, fontFamily: mainFont, fill: 0xffffff, align: 'left' });
+TextElement.bigText = new PIXI.TextStyle({ fontSize: 32, fontFamily: mainFont, fill: 0xffffff, align: 'left' });
+TextElement.veryBigText = new PIXI.TextStyle({ fontSize: 48, fontFamily: mainFont, fill: 0xffffff, align: 'left' });
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextElement;
 
-},{"./InterfaceElement":11}],16:[function(require,module,exports){
+},{"./InterfaceElement":11}],17:[function(require,module,exports){
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
@@ -1862,7 +1924,7 @@ TextField.BLINK_INTERVAL = 750;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextField;
 
-},{"../../common/Vector2D":31,"../events/GameEvent":5,"./AttachInfo":7,"./InterfaceElement":11,"./MaskElement":12,"./Panel":13,"./TextElement":15}],17:[function(require,module,exports){
+},{"../../common/Vector2D":33,"../events/GameEvent":5,"./AttachInfo":7,"./InterfaceElement":11,"./MaskElement":12,"./Panel":13,"./TextElement":16}],18:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1875,81 +1937,167 @@ var AttachInfo_1 = require("../AttachInfo");
 var Panel_1 = require("../Panel");
 var ElementList_1 = require("../ElementList");
 var TextField_1 = require("../TextField");
-var Game_1 = require("../../Game");
-var InputManager_1 = require("../InputManager");
 var GameEvent_1 = require("../../events/GameEvent");
 var TextFieldListManager_1 = require("./TextFieldListManager");
 var TextButton_1 = require("../TextButton");
-var LoginMenu = (function (_super) {
-    __extends(LoginMenu, _super);
-    function LoginMenu() {
+var GenericListDialog = (function (_super) {
+    __extends(GenericListDialog, _super);
+    function GenericListDialog(width, borderPadding) {
+        if (width === void 0) { width = 300; }
+        if (borderPadding === void 0) { borderPadding = 20; }
         var _this = _super.call(this) || this;
-        _this.onSubmit = function (e) {
-            var userNameField = _this.getElementById("usernameField");
-            var passwordField = _this.getElementById("passwordField");
-            console.log("LOGIN as " + userNameField.text + "#" + passwordField.text);
-            Game_1.default.instance.loginManager.login(userNameField.text, passwordField.text);
-        };
-        _this.onClickRegister = function (e) {
-            console.log("I wanna make an account");
-        };
-        _this._className = "LoginMenu";
-        _this._list = new ElementList_1.default(300, ElementList_1.default.VERTICAL, 6, ElementList_1.default.CENTRE);
-        //Add things to list...
-        var text;
-        var userNameField;
-        var passwordField;
-        var button;
-        //Title
-        text = new TextElement_1.default("MMO Online", TextElement_1.default.bigText);
-        _this._list.addChild(text, 10); //add extra padding between form and title
-        //Username
-        text = new TextElement_1.default("Username", TextElement_1.default.basicText);
-        text.id = "usernameLabel";
-        _this._list.addChild(text);
-        userNameField = new TextField_1.default(250, 28, TextElement_1.default.basicText, TextField_1.default.alphabets.abc123);
-        userNameField.id = "usernameField";
-        _this._list.addChild(userNameField);
-        //Pass
-        text = new TextElement_1.default("Password", TextElement_1.default.basicText);
-        text.id = "passwordLabel";
-        _this._list.addChild(text);
-        passwordField = new TextField_1.default(250, 28, TextElement_1.default.basicText);
-        passwordField.id = "passwordField";
-        passwordField.hidden = true;
-        _this._list.addChild(passwordField, 10);
-        //Buttons (Log In and Register)
-        var buttonContainer = new ElementList_1.default(30, ElementList_1.default.HORIZONTAL, 10, ElementList_1.default.CENTRE);
-        button = new TextButton_1.default("Log In", TextButton_1.default.colorSchemes.green);
-        buttonContainer.addChild(button);
-        button.addEventListener(GameEvent_1.default.types.ui.LEFTMOUSECLICK, _this.onSubmit);
-        button = new TextButton_1.default("Register");
-        buttonContainer.addChild(button);
-        button.addEventListener(GameEvent_1.default.types.ui.LEFTMOUSECLICK, _this.onClickRegister);
-        _this._list.addChild(buttonContainer);
-        //Resize to fit, and attach bg an list
-        _this._bg = new Panel_1.default(_this._list.width + 40, _this._list.height + 40, Panel_1.default.BASIC);
-        _this.resize(_this._bg.width, _this._bg.height);
-        _this.addChild(_this._bg);
-        _this.addChild(_this._list);
-        _this._bg.attachToParent(AttachInfo_1.default.Center);
-        _this._list.attachToParent(AttachInfo_1.default.Center);
-        //Focus first field
-        InputManager_1.default.instance.focus(_this.getElementById("usernameField"));
-        //Set up field manager
-        _this._textFieldManager = new TextFieldListManager_1.default([
-            userNameField,
-            passwordField
-        ]);
-        _this._textFieldManager.addEventListener(GameEvent_1.default.types.ui.SUBMIT, _this.onSubmit);
+        _this.bg = null;
+        _this.list = null;
+        _this.textFields = [];
+        _this.textFieldManager = null;
+        _this.finalized = false;
+        _this.onSubmit = null;
+        _this.validator = null;
+        _this._className = "GenericListDialog";
+        _this.dialogWidth = width;
+        _this.borderPadding = borderPadding;
+        _this.list = new ElementList_1.default(_this.dialogWidth, ElementList_1.default.VERTICAL, 6, ElementList_1.default.CENTRE);
+        _this.addChild(_this.list);
         return _this;
     }
-    return LoginMenu;
+    GenericListDialog.prototype.draw = function () {
+        if (!this.finalized) {
+            console.log(this.fullName + ": auto-finalize (parent size might be wrong!)");
+            this.finalize();
+        }
+        _super.prototype.draw.call(this);
+    };
+    /**
+     * Set up text fields, resize self, make background. Call it last.
+     */
+    GenericListDialog.prototype.finalize = function () {
+        var _this = this;
+        if (this.finalized) {
+            console.warn(this.fullName + ": already finalized!");
+            return;
+        }
+        this.bg = new Panel_1.default(this.list.width + this.borderPadding * 2, this.list.height + this.borderPadding * 2, Panel_1.default.BASIC);
+        this.resize(this.bg.width, this.bg.height);
+        console.log(this.fullName + ": finalize " + this.width + ", " + this.height);
+        this.addChild(this.bg);
+        this.addChild(this.list);
+        this.bg.attachToParent(AttachInfo_1.default.Center);
+        this.list.attachToParent(AttachInfo_1.default.Center);
+        if (this.textFields.length > 0) {
+            this.textFieldManager = new TextFieldListManager_1.default(this.textFields);
+            this.textFieldManager.addEventListener(GameEvent_1.default.types.ui.SUBMIT, function (e) { _this.submit(); });
+        }
+        this.finalized = true;
+    };
+    GenericListDialog.prototype.submit = function (additionalData) {
+        if (additionalData === void 0) { additionalData = null; }
+        if (this.onSubmit) {
+            var data = this.getSubmitData(additionalData);
+            var ok = true;
+            if (this.validator)
+                ok = this.validator(data);
+            if (ok) {
+                this.onSubmit(data);
+            }
+        }
+        else {
+            console.warn(this.fullName + ": no onSubmit function!");
+        }
+    };
+    GenericListDialog.prototype.getSubmitData = function (additionalData) {
+        var data = {};
+        for (var _i = 0, _a = this.textFields; _i < _a.length; _i++) {
+            var textField = _a[_i];
+            data[textField.name] = textField.text;
+        }
+        if (additionalData) {
+            for (var prop in additionalData) {
+                data[prop] = additionalData[prop];
+            }
+        }
+        return data;
+    };
+    GenericListDialog.prototype.setFields = function (data) {
+        for (var _i = 0, _a = this.textFields; _i < _a.length; _i++) {
+            var textField = _a[_i];
+            if (data.hasOwnProperty(textField.name)) {
+                textField.text = data[textField.name];
+            }
+        }
+    };
+    GenericListDialog.prototype.addBigTitle = function (text, padding) {
+        if (padding === void 0) { padding = 10; }
+        var title = new TextElement_1.default(text, TextElement_1.default.bigText);
+        title.name = "title";
+        this.list.addChild(title, padding); //add extra padding between form and title
+    };
+    GenericListDialog.prototype.addMediumTitle = function (text, padding) {
+        if (padding === void 0) { padding = 5; }
+        var title = new TextElement_1.default(text, TextElement_1.default.mediumText);
+        title.name = "title";
+        this.list.addChild(title, padding); //add extra padding between form and title
+    };
+    GenericListDialog.prototype.addMessage = function (text, padding) {
+        if (padding === void 0) { padding = 0; }
+        var message = new TextElement_1.default(text, TextElement_1.default.basicText);
+        this.list.addChild(message, padding); //add extra padding between form and title
+    };
+    GenericListDialog.prototype.addTextField = function (name, alphabet, hidden, defaultStr, validator, padding) {
+        if (hidden === void 0) { hidden = false; }
+        if (defaultStr === void 0) { defaultStr = ""; }
+        if (validator === void 0) { validator = null; }
+        if (padding === void 0) { padding = 0; }
+        var field = new TextField_1.default(250, 28, TextElement_1.default.basicText, alphabet, validator);
+        if (defaultStr)
+            field.text = defaultStr;
+        field.hidden = hidden;
+        field.name = name;
+        this.list.addChild(field, padding);
+        this.textFields.push(field);
+    };
+    GenericListDialog.prototype.addLabeledTextField = function (label, name, alphabet, hidden, defaultStr, validator, padding) {
+        if (hidden === void 0) { hidden = false; }
+        if (defaultStr === void 0) { defaultStr = ""; }
+        if (validator === void 0) { validator = null; }
+        if (padding === void 0) { padding = 0; }
+        this.addMessage(label);
+        this.addTextField(name, alphabet, hidden, defaultStr, validator, padding);
+    };
+    GenericListDialog.prototype.addButtons = function (infos, padding) {
+        if (padding === void 0) { padding = 0; }
+        var buttonContainer = new ElementList_1.default(30, ElementList_1.default.HORIZONTAL, 10, ElementList_1.default.CENTRE);
+        for (var _i = 0, infos_1 = infos; _i < infos_1.length; _i++) {
+            var info = infos_1[_i];
+            var colorScheme = info.colorScheme;
+            if (!colorScheme)
+                colorScheme = TextButton_1.default.colorSchemes.blue;
+            var button = new TextButton_1.default(info.text, colorScheme);
+            button.onClick = info.onClick;
+            buttonContainer.addChild(button);
+        }
+        this.list.addChild(buttonContainer, padding);
+    };
+    GenericListDialog.prototype.addSubmitAndCloseButtons = function (submitText, closeText, padding) {
+        var _this = this;
+        if (submitText === void 0) { submitText = "Submit"; }
+        if (closeText === void 0) { closeText = "Close"; }
+        if (padding === void 0) { padding = 0; }
+        this.addButtons([
+            { text: submitText, colorScheme: TextButton_1.default.colorSchemes.green, onClick: function (e) { _this.submit(); } },
+            { text: closeText, colorScheme: TextButton_1.default.colorSchemes.red, onClick: function (e) { _this.removeSelf(); } }
+        ], padding);
+    };
+    GenericListDialog.prototype.addSpacer = function (height) {
+        var spacer = new InterfaceElement_1.default();
+        spacer.resize(10, height);
+        this.list.addChild(spacer);
+    };
+    return GenericListDialog;
 }(InterfaceElement_1.default));
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = LoginMenu;
+exports.default = GenericListDialog;
 
-},{"../../Game":2,"../../events/GameEvent":5,"../AttachInfo":7,"../ElementList":9,"../InputManager":10,"../InterfaceElement":11,"../Panel":13,"../TextButton":14,"../TextElement":15,"../TextField":16,"./TextFieldListManager":19}],18:[function(require,module,exports){
+},{"../../events/GameEvent":5,"../AttachInfo":7,"../ElementList":9,"../InterfaceElement":11,"../Panel":13,"../TextButton":15,"../TextElement":16,"../TextField":17,"./TextFieldListManager":21}],19:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -1957,47 +2105,161 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var InterfaceElement_1 = require("../InterfaceElement");
+var GenericListDialog_1 = require("./GenericListDialog");
+var TextButton_1 = require("../TextButton");
+var InputManager_1 = require("../InputManager");
 var AttachInfo_1 = require("../AttachInfo");
-var LoginMenu_1 = require("./LoginMenu");
+var InterfaceRoot = (function (_super) {
+    __extends(InterfaceRoot, _super);
+    function InterfaceRoot(container) {
+        var _this = _super.call(this) || this;
+        _this.layers = {};
+        InterfaceRoot._instance = _this;
+        container.addChild(_this._displayObject);
+        _this.name = "root";
+        _this.id = "root";
+        _this.useDebugRect = false;
+        for (var _i = 0, _a = InterfaceRoot.LayerOrder; _i < _a.length; _i++) {
+            var layerName = _a[_i];
+            var layer = new InterfaceElement_1.default();
+            _this.addChild(layer);
+            layer.resizeToParent();
+            layer.name = layerName;
+            layer.useDebugRect = false;
+            _this.layers[layerName] = layer;
+        }
+        return _this;
+    }
+    Object.defineProperty(InterfaceRoot, "instance", {
+        get: function () {
+            return InterfaceRoot._instance;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    InterfaceRoot.prototype.getElementAtPoint = function (point) {
+        var popups = this.getLayer(InterfaceRoot.LayerNames.popups);
+        if (popups.numChildren > 0) {
+            //if there are popups, only they can be clicked
+            return popups.getElementAtPoint(point);
+        }
+        return _super.prototype.getElementAtPoint.call(this, point);
+    };
+    InterfaceRoot.prototype.getLayer = function (name) {
+        var layer = this.layers[name];
+        if (!layer)
+            return null;
+        return layer;
+    };
+    InterfaceRoot.prototype.addUI = function (element) {
+        this.getLayer(InterfaceRoot.LayerNames.gameUI).addChild(element);
+    };
+    InterfaceRoot.prototype.addDialog = function (element) {
+        this.getLayer(InterfaceRoot.LayerNames.dialogs).addChild(element);
+    };
+    InterfaceRoot.prototype.addAlert = function (element) {
+        this.getLayer(InterfaceRoot.LayerNames.alerts).addChild(element);
+    };
+    InterfaceRoot.prototype.addPopup = function (element) {
+        this.getLayer(InterfaceRoot.LayerNames.popups).addChild(element);
+    };
+    InterfaceRoot.prototype.showWarningPopup = function (message, title, onClose) {
+        if (title === void 0) { title = null; }
+        if (onClose === void 0) { onClose = null; }
+        var dialog = new GenericListDialog_1.default(200, 10);
+        if (title)
+            dialog.addMediumTitle(title, 0);
+        dialog.addMessage(message, 5);
+        dialog.addButtons([
+            { text: "Close", colorScheme: TextButton_1.default.colorSchemes.red, onClick: function (e) {
+                    dialog.removeSelf();
+                    if (onClose) {
+                        onClose();
+                    }
+                } }
+        ]);
+        dialog.finalize();
+        this.addPopup(dialog);
+        dialog.attachToParent(AttachInfo_1.default.Center);
+        InputManager_1.default.instance.focus(null);
+    };
+    return InterfaceRoot;
+}(InterfaceElement_1.default));
+InterfaceRoot.LayerNames = {
+    gameUI: "gameUI",
+    dialogs: "dialogs",
+    alerts: "alerts",
+    popups: "popups" //warning boxes, error messages, confirmations
+};
+InterfaceRoot.LayerOrder = ["gameUI", "dialogs", "alerts", "popups"];
+InterfaceRoot._instance = null;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = InterfaceRoot;
+
+},{"../AttachInfo":7,"../InputManager":10,"../InterfaceElement":11,"../TextButton":15,"./GenericListDialog":18}],20:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var InterfaceElement_1 = require("../InterfaceElement");
+var TextField_1 = require("../TextField");
+var AttachInfo_1 = require("../AttachInfo");
+var GenericListDialog_1 = require("./GenericListDialog");
+var TextButton_1 = require("../TextButton");
+var InterfaceRoot_1 = require("./InterfaceRoot");
+var Game_1 = require("../../Game");
 var Log = require("../../util/Log");
 var MainMenu = (function (_super) {
     __extends(MainMenu, _super);
     function MainMenu() {
         var _this = _super.call(this) || this;
-        _this._currentMenuName = "";
         _this._currentMenu = null;
+        _this.onLoginSubmit = function (data) {
+            var username = data["username"];
+            var password = data["password"];
+            console.log("LOGIN as " + username + "#"); // + password);
+            Game_1.default.instance.loginManager.login(username, password);
+        };
         _this._className = "MainMenu";
         //this._loginMenu = new TextElement("Login!", TextElement.veryBigText);
-        _this._loginMenu = new LoginMenu_1.default();
+        //this._loginMenu = new LoginMenu();
+        var login = new GenericListDialog_1.default(300);
+        login.addBigTitle("MMO Online");
+        login.addLabeledTextField("Username", "username", TextField_1.default.alphabets.abc123, false, "", null, 5);
+        login.addLabeledTextField("Password", "password", TextField_1.default.alphabets.abc123, true, "", null, 15);
+        login.addButtons([
+            { text: "Login", colorScheme: TextButton_1.default.colorSchemes.green, onClick: function (e) { login.submit(); } },
+            { text: "Register", colorScheme: TextButton_1.default.colorSchemes.blue, onClick: function (e) {
+                    InterfaceRoot_1.default.instance.showWarningPopup("I haven't made that dialog yet.");
+                } }
+        ]);
+        login.finalize();
+        login.onSubmit = _this.onLoginSubmit;
+        _this._loginMenu = login;
         return _this;
     }
-    MainMenu.prototype.showMenu = function (name) {
-        if (name == this._currentMenuName) {
-            Log.log('debug', 'MainMenu already on "' + name + '"');
-            return;
-        }
-        if (this._currentMenu)
-            this.removeChild(this._currentMenu);
-        switch (name) {
-            case "login":
-                this.showLogin();
-                break;
-        }
-        this.resizeToFitChildren();
-    };
     MainMenu.prototype.showLogin = function () {
         Log.log('debug', 'MainMenu: login');
-        this._currentMenuName = "login";
-        this._currentMenu = this._loginMenu;
-        this.addChild(this._loginMenu);
-        this._loginMenu.attachToParent(AttachInfo_1.default.Center);
+        this.showMenu(this._loginMenu);
+    };
+    MainMenu.prototype.showMenu = function (menu) {
+        if (this._currentMenu == menu)
+            return;
+        if (this._currentMenu)
+            this.removeChild(this._currentMenu);
+        this.addChild(menu);
+        menu.attachToParent(AttachInfo_1.default.Center);
+        this._currentMenu = menu;
+        this.resizeToFitChildren();
     };
     return MainMenu;
 }(InterfaceElement_1.default));
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MainMenu;
 
-},{"../../util/Log":27,"../AttachInfo":7,"../InterfaceElement":11,"./LoginMenu":17}],19:[function(require,module,exports){
+},{"../../Game":2,"../../util/Log":29,"../AttachInfo":7,"../InterfaceElement":11,"../TextButton":15,"../TextField":17,"./GenericListDialog":18,"./InterfaceRoot":19}],21:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -2057,7 +2319,7 @@ var TextFieldListManager = (function (_super) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextFieldListManager;
 
-},{"../../events/GameEvent":5,"../../events/GameEventHandler":6,"../InputManager":10}],20:[function(require,module,exports){
+},{"../../events/GameEvent":5,"../../events/GameEventHandler":6,"../InputManager":10}],22:[function(require,module,exports){
 /*
    Code entry point. Keep it clean.
 */
@@ -2067,7 +2329,7 @@ var viewDiv = document.getElementById("viewDiv");
 var game = new Game_1.default(viewDiv);
 game.init();
 
-},{"./Game":2}],21:[function(require,module,exports){
+},{"./Game":2}],23:[function(require,module,exports){
 "use strict";
 exports.mainMenuMusic = [
     ["music/fortress", "sound/music/fortress.ogg"]
@@ -2078,7 +2340,7 @@ exports.interfaceSounds = [
     ["ui/nope", "sound/ui/nope.ogg"]
 ];
 
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 var SoundLoadRequest = (function () {
     function SoundLoadRequest(name, list, onComplete, onProgress) {
@@ -2171,7 +2433,7 @@ SoundManager._instance = null;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = SoundManager;
 
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var Game_1 = require("../Game");
@@ -2197,7 +2459,7 @@ function buttonBackground(width, height, type) {
 }
 exports.buttonBackground = buttonBackground;
 
-},{"../Game":2}],24:[function(require,module,exports){
+},{"../Game":2}],26:[function(require,module,exports){
 "use strict";
 var TextureLoader = (function () {
     function TextureLoader(sheetName, mapName, callback) {
@@ -2257,7 +2519,7 @@ var TextureLoader = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureLoader;
 
-},{}],25:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 "use strict";
 /// <reference path="../../declarations/pixi.js.d.ts"/>
 var ColorUtil = require("../util/ColorUtil");
@@ -2399,7 +2661,7 @@ TextureWorker._supportsImageDataConstructor = -1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TextureWorker;
 
-},{"../util/ColorUtil":26}],26:[function(require,module,exports){
+},{"../util/ColorUtil":28}],28:[function(require,module,exports){
 "use strict";
 function rgbToNumber(r, g, b) {
     return (r << 16) + (g << 8) + b;
@@ -2421,13 +2683,15 @@ function rgbaString(r, g, b, a) {
 }
 exports.rgbaString = rgbaString;
 
-},{}],27:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict";
 /*
    Provides pretty console.log messages, by key.
 */
 var types = {};
 var isEdge = (function () {
+    if (!window.clientInformation)
+        return false; //gee thanks firefox
     if (window.clientInformation.appVersion && window.clientInformation.appVersion.indexOf("Edge") != -1)
         return true;
     if (window.clientInformation.userAgent && window.clientInformation.userAgent.indexOf("Edge") != -1)
@@ -2470,7 +2734,7 @@ function log(typeName, msg) {
 }
 exports.log = log;
 
-},{}],28:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict";
 var AssetCache = (function () {
     /**
@@ -2521,7 +2785,7 @@ var AssetCache = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AssetCache;
 
-},{}],29:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 /**
  * Generates string IDs from an alphabet. IDs can be relinquished and recycled to keep them short.
@@ -2589,7 +2853,7 @@ IDPool._alphanumeric = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = IDPool;
 
-},{}],30:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 "use strict";
 function noop() { }
 exports.noop = noop;
@@ -2670,7 +2934,7 @@ function isCoordinate(x) {
 }
 exports.isCoordinate = isCoordinate;
 
-},{}],31:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 "use strict";
 var Util = require("./Util");
 var Vector2D = (function () {
@@ -2785,7 +3049,7 @@ var Vector2D = (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Vector2D;
 
-},{"./Util":30}],32:[function(require,module,exports){
+},{"./Util":32}],34:[function(require,module,exports){
 "use strict";
 var IDPool_1 = require("../IDPool");
 var Vector2D_1 = require("../Vector2D");
@@ -2957,7 +3221,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Message;
 var MessageTypes = require("./MessageTypes");
 
-},{"../IDPool":29,"../Util":30,"../Vector2D":31,"./MessageTypes":33}],33:[function(require,module,exports){
+},{"../IDPool":31,"../Util":32,"../Vector2D":33,"./MessageTypes":35}],35:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -3342,4 +3606,4 @@ var Frame = (function (_super) {
 exports.Frame = Frame;
 classesByType[exports.FRAME] = Frame;
 
-},{"../Util":30,"../Vector2D":31,"./Message":32}]},{},[20]);
+},{"../Util":32,"../Vector2D":33,"./Message":34}]},{},[22]);

@@ -95,6 +95,9 @@ export default class InputManager {
 		var coords:Vector2D = this.getMouseCoords(e, true);
 		var element:InterfaceElement = Game.instance.interfaceRoot.getElementAtPoint(coords);
 
+		if (element) console.log("CLICK " + element.fullName);
+		else console.log("CLICK nothing");
+
 		switch(e.which) {
 			case 1:
 				//left
