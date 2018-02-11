@@ -71,3 +71,24 @@ export function isObject(x, allowNull:boolean=false):boolean {
 export function isCoordinate(x):boolean {
     return (isArray(x) && x.length == 2 && isNumber(x[0]) && isNumber(x[1]));
 }
+
+var strToTypeCheck = {
+    "array":isArray,
+    "object":isObject,
+    "coord":isCoordinate,
+    "number":isNumber,
+    "int":isInt,
+    "string":isString
+}
+export function checkArrayTypes(arr:Array<any>, types:Array<string>):boolean {
+    var len:number = types.length;
+    for (var i = 0; i < len; i++) {
+        var func = strToTypeCheck[types[i]];
+        if (!func) {
+            console.log("Util ERROR: unknown type check function '" + types[i] + "'");
+            return false;
+        }
+        if (!func(arr[i])) return false;
+    }
+    return true;
+}

@@ -65,7 +65,7 @@ export default class Room extends GenericManager {
 
 	public update(timeDelta:number)
 	{
-		this.timeSinceMove += timeDelta;
+		/*this.timeSinceMove += timeDelta;
 		if (this.timeSinceMove > this.moveInterval) {
 			this.timeSinceMove = 0;
 
@@ -79,7 +79,7 @@ export default class Room extends GenericManager {
 
 				unit.addOrder(order, true);
 			}
-		}
+		}*/
 
 		//console.log(this.name + ": update " + timeElapsed);
 		for (var unit of this._units.list) {
@@ -163,7 +163,7 @@ export default class Room extends GenericManager {
 		if (subscribed && player.character) {
 			var unit:Unit = new Unit();
 			unit.initForCharacter(player.character);
-			this.addUnit(unit, new Vector2D(unit.id * 50)); //wow, truly excellent (TODO)
+			this.addUnit(unit, new Vector2D(Math.random() * 300, Math.random() * 300)); //wow, truly excellent (TODO)
 			player.character.unit = unit;
 		}
 	}
@@ -173,6 +173,12 @@ export default class Room extends GenericManager {
 
 		if (player.character && player.character.unit) {
 			this.removeUnit(player.character.unit);
+		}
+	}
+
+	public onPlayerOrder(player:Player, message:MessageTypes.OrderMessage) {
+		if (!this._subscribedPlayers.contains(player)) {
+			this.log("ERROR: onPlayerOrder for unsubscribed player");
 		}
 	}
 

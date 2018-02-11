@@ -95,7 +95,11 @@ export default class WebSocketClient {
 					break;
 
 				default:
-					console.log("Unknown message type " + message.type);
+					if (this.inGame) {
+						this.player.onMessage(message);
+					} else {
+						console.log("Unhandled message type " + message.type);
+					}
 			}
 		} else {
 			console.log("ERROR: can't parse message \"" + data + "\"");
@@ -155,8 +159,7 @@ export default class WebSocketClient {
 
 					if (!this.loggedIn) {
 						params['failReason'] = "Not logged in.";
-					}
-					else if (this.inGame) {
+					} else if (this.inGame) {
 						params['failReason'] = "Already in a game.";
 					} else if (!this.onGameServer) {
 						params['failReason'] = "Not connected to a game server.";

@@ -1,5 +1,6 @@
 import WebSocketClient from '../WebSocketClient';
 import Room from './room/Room';
+import Unit from './room/entity/Unit';
 import Game from './Game';
 import Character from './character/Character';
 import Message from '../../common/messages/Message';
@@ -63,6 +64,24 @@ export default class Player {
 
 	}
 
+	public ownsUnit(unit:Unit) {
+		if (this.character && unit.characterId == this.character.id) return true;
+		return false;
+	}
+
+	/**
+	 * Called from WebSocketClient
+	 */
+	public onMessage(message:Message) {
+		if (message.type === MessageTypes.ORDER)
+		{
+			var room: Room = this.subscribedRooms[0];
+			if (room) {
+				room.onPlayerOrder(this, message as MessageTypes.OrderMessage);
+			}
+		}
+	}
+
 	/**
 	 * Queues a message to be sent at the end of the frame.
 	 */
@@ -84,7 +103,7 @@ export default class Player {
 			console.log(this.debugString + ": receiving messages, but no associated client!");
 		}
 
-		this._serializedMessageQueue = [];
+		this._serializedMessageQueue.length = 0;
 	}
 
 	public sendMessage(msg:Message) {

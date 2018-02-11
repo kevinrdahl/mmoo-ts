@@ -2,7 +2,7 @@ import Message from './Message';
 import * as Util from '../Util';
 import Vector2D from '../Vector2D';
 
-//Single-digit numbers should be reserved for very common types
+//Single-digit numbers should be reserved for very common types (messages FROM server)
 ////////////////////////////////////////////////////////////////////////////////
 
 export const PING = 0;
@@ -22,8 +22,9 @@ export const GAME_LEFT = 15;
 export const ROOM_JOINED = 16;
 export const ROOM_LEFT = 17;
 export const FRAME = 18;
+export const ORDER = 19;
 
-//I suspect there will be many unit message types. Reserve [50,70] for
+//I suspect there will be many unit message types. Reserve [50,99] for
 //all but the most common unit messages
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -34,7 +35,7 @@ export const UNIT_UNSEEN = 51;
  * Giving everything its own class makes things neat and happy. Probably.
  * This file will likely become very long, but it's basically just type checking so oh well.
  */
-var classesByType = {};
+var classesByType = [];
 
 export function getClassByType(type:number) {
 	var c = classesByType[type];
@@ -320,7 +321,7 @@ classesByType[UNIT_MOVED] = UnitMoved;
  * A unit appears or otherwise becomes visible. Contains everything a client
  * should need to know about a unit. An additional message with more information
  * should be sent to the unit's owner, if applicable.
- * 
+ *
  * Just a JSON object? This is likely to be a good data optimization target in future.
  */
 export class UnitSeen extends Message {
@@ -383,3 +384,25 @@ export class Frame extends Message {
 	}
 }
 classesByType[FRAME] = Frame;
+
+export class OrderMessage extends Message {
+	constructor (
+		public unitId:number,
+		public str:string,
+		public params:any,
+		public queue:boolean
+	) { super(ORDER); }
+
+	public static fromArgs(args:Array<any>):OrderMessage {
+		if (Util.isInt(args[0]) && Util.isString(args[1]) && Util.isObject(args[2])) {
+			return new OrderMessage(args[0], args[1], args[2], Boolean(args[3]));
+		}
+		return null;
+	}
+
+	public serialize():string {
+		var queue = (this.queue) ? 1 : 0;
+		return super.serialize() + JSON.stringify([this.unitId, this.str, this.params, queue]);
+	}
+}
+classesByType[ORDER] = OrderMessage;
